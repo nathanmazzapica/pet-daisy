@@ -1,0 +1,125 @@
+* {
+    font-family: "Comic Sans MS"
+}
+
+body {
+    height: 100vh;
+    overflow: hidden;
+    background: radial-gradient(circle, #d0f0c0 10%, #0e250f);
+}
+
+h2, h3 {
+    color: ghostwhite;
+    text-align: center;
+    margin: 3px;
+}
+
+h2 {
+    font-size: 2.5rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+#daisy-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30%;
+}
+
+#daisy-image {
+    width: 90%;
+    transition: all 0.15s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -webkit-filter: drop-shadow(0px 5px 5px #2e7d32);
+    filter: drop-shadow(0px 5px 5px #2e7d32);
+}
+
+#daisy-image:hover {
+    cursor: grab;
+    -webkit-filter: drop-shadow(0px 7px 7px #2e7d32);
+    filter: drop-shadow(0px 7px 7px #2e7d32);
+}
+
+#daisy-image:active {
+    transition: none;
+    width: 87%;
+    cursor: grabbing;
+}
+
+#game-container {
+    height: 80vh;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+
+#chat-container {
+    border: 3px solid #bfbfee;
+    border-radius: 8px;
+    height: 60%;
+    width: 35%;
+    display: flex;
+    flex-direction: column;
+    background-color: #bfbfee;
+    box-shadow: 0px 8px 8px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+}
+
+#chat-message-container {
+    height: 85%;
+    width: 100%;
+    overflow-y: auto;
+    border: none;
+    padding: 10px;
+    box-sizing: border-box;
+    background-color: #E6E6FA;
+}
+
+
+#chat-input {
+    margin: 10px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-top: 1px solid #ddd;
+    font-size: 14px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+}
+
+
+.message {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: #d9d9fa;
+    font-size: 14px;
+    word-wrap: break-word;
+}
+
+.message:hover {
+    background-color: #c9c9ee;
+}
+
+
+.name {
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+.notification {
+    margin: 5px 0;
+    font-weight: 300;
+    text-align: center;
+    font-size: 12px;
+    background-color: #bfbfee;
+    color: #555;
+}
