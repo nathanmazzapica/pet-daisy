@@ -8,7 +8,31 @@ const ws = new WebSocket("ws://localhost:8080/ws")
 
 let personalPets = 0;
 
-daisy.addEventListener("click", () => {
+const noseCoordinates = { x: 215, y: 90 };
+const noseHonk = new Audio("../static/honk.mp3");
+
+const leftEyeCoordinate = { x: 320, y: 215 };
+const rightEyeCoordinate = { x: 505, y: 157 };
+const eyeOuch = new Audio("../static/ouch.mp3");
+
+daisy.addEventListener("click", (e) => {
+
+    const rect = daisy.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    console.log(x, y);
+    if (inRadius({x, y}, noseCoordinates, 13)) {
+        console.log("honk");
+        noseHonk.currentTime = 0;
+        noseHonk.play();
+    }
+
+    if (inRadius({x, y}, leftEyeCoordinate, 25) || inRadius({x, y}, rightEyeCoordinate, 5)) {
+        eyeOuch.currentTime = 0;
+        eyeOuch.play();
+    }
+
+    // extract to func
     personalPets++;
     petMessage = {
         name: "nathan",
@@ -58,6 +82,10 @@ ws.onmessage = (event) => {
 
 }
 
+function petDaisy() {
+
+}
+
 function displayServerChatNotification(content) {
     const notification = document.createElement("p");
     notification.classList.add("notification", "message");
@@ -100,6 +128,12 @@ function setGradientPosition() {
     document.body.style.background = `
         radial-gradient(circle at ${centerX}px ${centerY}px, #d0f0c0 1%, #0e250f)
     `;
+}
+
+function inRadius(point1, point2, radius) {
+    const dist = Math.sqrt(Math.pow((point2.x - point1.x), 2) + Math.pow((point2.y - point1.y),2));
+
+    return dist <= radius;
 }
 
 window.addEventListener("resize", setGradientPosition);
