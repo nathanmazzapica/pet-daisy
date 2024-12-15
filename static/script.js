@@ -20,26 +20,11 @@ daisy.addEventListener("click", (e) => {
     const rect = daisy.getBoundingClientRect();
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
-    console.log(x, y);
-    if (inRadius({x, y}, noseCoordinates, 13)) {
-        console.log("honk");
-        noseHonk.currentTime = 0;
-        noseHonk.play();
-    }
 
-    if (inRadius({x, y}, leftEyeCoordinate, 25) || inRadius({x, y}, rightEyeCoordinate, 5)) {
-        eyeOuch.currentTime = 0;
-        eyeOuch.play();
-    }
+    checkAndPerformEasterEggs({x, y});
 
-    // extract to func
-    personalPets++;
-    petMessage = {
-        name: "nathan",
-        message: `$!pet;${personalPets}`,
-    }
-    ws.send(JSON.stringify(petMessage));
-    personalCounter.innerText = `You have pet her ${personalPets} time${personalPets === 1 ? "" : "s"}!`;
+
+    petDaisy();
 })
 
 chatInput.addEventListener("keydown", (e) => {
@@ -83,7 +68,27 @@ ws.onmessage = (event) => {
 }
 
 function petDaisy() {
+    personalPets++;
+    petMessage = {
+        name: "nathan",
+        message: `$!pet;${personalPets}`,
+    }
+    ws.send(JSON.stringify(petMessage));
+    personalCounter.innerText = `You have pet her ${personalPets} time${personalPets === 1 ? "" : "s"}!`;
+}
 
+function checkAndPerformEasterEggs(mousePos) {
+    console.log(mousePos);
+    if (inRadius(mousePos, noseCoordinates, 13)) {
+        console.log("honk");
+        noseHonk.currentTime = 0;
+        noseHonk.play();
+    }
+
+    if (inRadius(mousePos, leftEyeCoordinate, 25) || inRadius(mousePos, rightEyeCoordinate, 5)) {
+        eyeOuch.currentTime = 0;
+        eyeOuch.play();
+    }
 }
 
 function displayServerChatNotification(content) {
