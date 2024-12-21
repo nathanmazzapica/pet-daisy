@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"html/template"
@@ -11,25 +12,10 @@ import (
 	"sync"
 )
 
-func ping(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("pong")
-	w.Write([]byte("pong"))
-
-}
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
-}
-
-type Client struct {
-	conn *websocket.Conn
-}
-
-type ClientMessage struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
 }
 
 var (
@@ -40,22 +26,61 @@ var (
 	notifications = make(chan ClientMessage)
 )
 
-func NewPetNotification() ClientMessage {
-	return ClientMessage{"petCounter", strconv.Itoa(counter)}
+type Client struct {
+	conn *websocket.Conn
 }
 
-func NewMilestoneNotification() ClientMessage {
-	return ClientMessage{"Daisy", fmt.Sprintf("Yay! I have been pet %v times!", counter)}
+type ClientMessage struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
 }
 
-func NewAchievmentNotification(user string, count int) ClientMessage {
-	return ClientMessage{"server", fmt.Sprintf("%v has pet daisy %v times!", user, count)}
+func main() {
+	fmt.Println("Hello, Daisy!")
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.HandleFunc("/", serveHome)
+
+	http.HandleFunc("/ws", handleConnections)
+
+	http.HandleFunc("/ping", ping)
+
+	go handleChatMessages()
+	go handleNotifications()
+	err := http.ListenAndServe(":8080", nil)
+
+	if err != nil {
+		fmt.Println("something fucked up")
+	}
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
+
+	user_id, err := r.Cookie("user_id")
+
+	if err != nil {
+		switch {
+		case errors.Is(err, http.ErrNoCookie):
+			cookie := http.Cookie{
+				Name:     "user_id",
+				Value:    "test",
+				HttpOnly: true,
+			}
+			http.SetCookie(w, &cookie)
+		default:
+			fmt.Println(err)
+			http.Error(w, "server error", http.StatusInternalServerError)
+			// todo: make funny error html page
+			return
+		}
+	}
+
+	userID := user_id.Value
+	fmt.Println(userID)
+
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 
-	err := tmpl.Execute(w, nil)
+	err = tmpl.Execute(w, nil)
 
 	if err != nil {
 		fmt.Println("error sending html", err)
@@ -96,10 +121,15 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 	playerCountUpdate := ClientMessage{"playerCount", strconv.Itoa(len(clients))}
 
-	notifications <- NewPetNotification()
+	notifications <- newPetNotification()
 	notifications <- joinNotification
 	notifications <- playerCountUpdate
 
+	readMessages(conn)
+
+}
+
+func readMessages(conn *websocket.Conn) {
 	for {
 		_, msg, err := conn.ReadMessage()
 
@@ -126,7 +156,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			mu.Unlock()
 			fmt.Println(clientMsg.Name, "pet daisy! She has now been pet: ", counter, "times.")
 
-			notifications <- NewPetNotification()
+			notifications <- newPetNotification()
 
 			personal, err := strconv.Atoi(strings.Split(clientMsg.Message, ";")[1])
 
@@ -135,11 +165,11 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if personal == 10 || personal == 50 || personal == 100 || personal == 500 || personal%1000 == 0 {
-				notifications <- NewAchievmentNotification(clientMsg.Name, personal)
+				notifications <- newAchievmentNotification(clientMsg.Name, personal)
 			}
 
 			if counter%100 == 0 {
-				notifications <- NewMilestoneNotification()
+				notifications <- newMilestoneNotification()
 			}
 
 		} else {
@@ -147,14 +177,31 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-
 }
 
-/*
+// BROADCAST HANDLERS //
+func handleNotifications() {
+	for {
+		newNotification := <-notifications
 
-To improve scalability, I could create a unique channel and goroutine handler for each new client
+		for client := range clients {
+			sendJSONToClient(client, newNotification)
+		}
 
-*/
+	}
+}
+
+func handleChatMessages() {
+	for {
+		newChatMessage := <-messages
+
+		for client := range clients {
+			sendJSONToClient(client, newChatMessage)
+		}
+	}
+}
+
+// HELPERS //
 
 func sendJSONToClient(client *Client, notification ClientMessage) {
 	jsonData, err := json.Marshal(notification)
@@ -175,42 +222,20 @@ func sendJSONToClient(client *Client, notification ClientMessage) {
 	}
 }
 
-func handleNotifications() {
-	for {
-		newNotification := <-notifications
-
-		for client := range clients {
-			sendJSONToClient(client, newNotification)
-		}
-
-	}
+func newPetNotification() ClientMessage {
+	return ClientMessage{"petCounter", strconv.Itoa(counter)}
 }
 
-func handleBroadcasts() {
-	for {
-		newChatMessage := <-messages
-
-		for client := range clients {
-			sendJSONToClient(client, newChatMessage)
-		}
-	}
+func newMilestoneNotification() ClientMessage {
+	return ClientMessage{"Daisy", fmt.Sprintf("Yay! I have been pet %v times!", counter)}
 }
 
-func main() {
-	fmt.Println("Hello, Daisy!")
+func newAchievmentNotification(user string, count int) ClientMessage {
+	return ClientMessage{"server", fmt.Sprintf("%v has pet daisy %v times!", user, count)}
+}
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.HandleFunc("/", serveHome)
-
-	http.HandleFunc("/ws", handleConnections)
-
-	http.HandleFunc("/ping", ping)
-
-	go handleBroadcasts()
-	go handleNotifications()
-	err := http.ListenAndServe(":8080", nil)
-
-	if err != nil {
-		fmt.Println("something fucked up")
-	}
+// ping is a debug endpoint to test if the server is reachable
+func ping(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("pong")
+	w.Write([]byte("pong"))
 }

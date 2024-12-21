@@ -1,3 +1,4 @@
+const daisyContainer = document.getElementById('daisy-container');
 const daisy = document.getElementById("daisy-image");
 const counter = document.getElementById("counter");
 const personalCounter = document.getElementById("personal-counter");
@@ -8,20 +9,25 @@ const ws = new WebSocket("ws://localhost:8080/ws")
 
 let personalPets = 0;
 
-const noseCoordinates = { x: 215, y: 90 };
+let daisyReferenceSize = {width: 894, height: 597};
+let referenceNoseCoordinates = {x: 349, y: 145};
+
+const noseCoordinates = {x: 349, y: 145};
 const noseHonk = new Audio("../static/honk.mp3");
 
-const leftEyeCoordinate = { x: 320, y: 215 };
-const rightEyeCoordinate = { x: 505, y: 157 };
+const leftEyeCoordinate = {x: 320, y: 215};
+const rightEyeCoordinate = {x: 505, y: 157};
 const eyeOuch = new Audio("../static/ouch.mp3");
 
 daisy.addEventListener("click", (e) => {
 
-    const rect = daisy.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
+    const mousePos = {
+        x: e.offsetX,
+        y: e.offsetY
+    }
 
-    checkAndPerformEasterEggs({x, y});
+
+    checkAndPerformEasterEggs(mousePos);
 
 
     petDaisy();
@@ -37,7 +43,6 @@ chatInput.addEventListener("keydown", (e) => {
 ws.onopen = () => {
     console.log("Connected to the server!");
 };
-
 
 
 ws.onmessage = (event) => {
@@ -79,13 +84,14 @@ function petDaisy() {
 
 function checkAndPerformEasterEggs(mousePos) {
     console.log(mousePos);
-    if (inRadius(mousePos, noseCoordinates, 13)) {
+    if (inRadius(mousePos, noseCoordinates, 20)) {
         console.log("honk");
         noseHonk.currentTime = 0;
         noseHonk.play();
     }
 
     if (inRadius(mousePos, leftEyeCoordinate, 25) || inRadius(mousePos, rightEyeCoordinate, 5)) {
+        console.log("ouch")
         eyeOuch.currentTime = 0;
         eyeOuch.play();
     }
@@ -136,10 +142,81 @@ function setGradientPosition() {
 }
 
 function inRadius(point1, point2, radius) {
-    const dist = Math.sqrt(Math.pow((point2.x - point1.x), 2) + Math.pow((point2.y - point1.y),2));
+    const dist = Math.sqrt(Math.pow((point2.x - point1.x), 2) + Math.pow((point2.y - point1.y), 2));
 
     return dist <= radius;
 }
 
-window.addEventListener("resize", setGradientPosition);
-window.addEventListener("load", setGradientPosition);
+function debugCircle(coordinate, id) {
+    const circle = document.createElement("div");
+
+    const rect = daisyContainer.getBoundingClientRect();
+    let x = coordinate.x - rect.left;
+    let y = coordinate.y - rect.top;
+
+    circle.style.width = '20px';
+    circle.style.height = '20px';
+    circle.style.backgroundColor = 'red';
+    circle.style.borderRadius = '50%';
+    circle.style.position = 'absolute';
+    circle.style.left = `${coordinate.x}px`;
+    circle.style.top = `${coordinate.y}px`;
+    circle.style.zIndex = '99999';
+    circle.style.transform = 'translate(-50%, -50%)';
+
+    if (id) {
+        circle.id = id
+    }
+
+
+    daisy.appendChild(circle);
+
+}
+
+window.addEventListener("resize", () => {
+    setGradientPosition();
+
+    let daisySize = {width: daisy.width * 0.87, height: daisy.height * 0.87};
+    console.log(daisySize)
+
+    let ratio = {
+        width: daisySize.width / daisyReferenceSize.width,
+        height: daisySize.height / daisyReferenceSize.height
+    };
+
+    console.log(ratio)
+
+    noseCoordinates.x = referenceNoseCoordinates.x * ratio.width;
+    noseCoordinates.y = referenceNoseCoordinates.y * ratio.height;
+
+    console.log(noseCoordinates.x)
+    console.log(noseCoordinates.y)
+
+
+
+});
+window.addEventListener("load", () => {
+        setGradientPosition();
+
+        let daisySize = {width: daisy.width * 0.87, height: daisy.height * 0.87};
+
+        let ratio = {
+            width: daisySize.width / daisyReferenceSize.width,
+            height: daisySize.height / daisyReferenceSize.height
+        };
+
+        console.log(ratio)
+
+        referenceNoseCoordinates.x = referenceNoseCoordinates.x * ratio.width;
+        referenceNoseCoordinates.y = referenceNoseCoordinates.y * ratio.height;
+        noseCoordinates.x = referenceNoseCoordinates.x;
+        noseCoordinates.y = referenceNoseCoordinates.y;
+
+        console.log(noseCoordinates.x)
+        console.log(noseCoordinates.y)
+
+        daisyReferenceSize = daisySize;
+
+
+    }
+);
