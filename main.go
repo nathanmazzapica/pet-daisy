@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"net/http"
@@ -57,26 +58,32 @@ func main() {
 func serveHome(w http.ResponseWriter, r *http.Request) {
 
 	user_id, err := r.Cookie("user_id")
+	var userID string
 
 	if err != nil {
 		switch {
 		case errors.Is(err, http.ErrNoCookie):
+			fmt.Println("hello, new user!")
+			newID := uuid.New().String()
+			fmt.Println("newID:", newID)
 			cookie := http.Cookie{
 				Name:     "user_id",
-				Value:    "test",
+				Value:    newID,
 				HttpOnly: true,
 			}
 			http.SetCookie(w, &cookie)
+			userID = newID
 		default:
 			fmt.Println(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
 			// todo: make funny error html page
 			return
 		}
+	} else {
+		userID = user_id.Value
 	}
 
-	userID := user_id.Value
-	fmt.Println(userID)
+	fmt.Printf("USER: {%s} CONNECTED\n", userID)
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 
