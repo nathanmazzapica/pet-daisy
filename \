@@ -1,0 +1,16 @@
+[Feature] User ID
+
+Server will now generate a UUID for new users. This will be used in the database to persist personal pets
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   go.mod
+#	modified:   go.sum
+#	modified:   main.go
+#	modified:   static/styles.css
+#

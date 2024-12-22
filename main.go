@@ -1,17 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	_ "github.com/mattn/go-sqlite3"
 	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 )
+
+var db *sql.DB
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -37,7 +41,20 @@ type ClientMessage struct {
 }
 
 func main() {
-	fmt.Println("Hello, Daisy!")
+
+	// load DB
+
+	db, err := sql.Open("sqlite3", "./data.db")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer db.Close()
+
+	result := db.QueryRow("SELECT SUM(pets) FROM users")
+	result.Scan(&counter)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", serveHome)
@@ -48,10 +65,12 @@ func main() {
 
 	go handleChatMessages()
 	go handleNotifications()
-	err := http.ListenAndServe(":8080", nil)
+
+	fmt.Println("Hello, Daisy!")
+	err = http.ListenAndServe(":8080", nil)
 
 	if err != nil {
-		fmt.Println("something fucked up")
+		fmt.Println("something messed up, shutting er down.")
 	}
 }
 
