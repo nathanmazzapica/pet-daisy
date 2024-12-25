@@ -105,6 +105,10 @@ function displayServerChatNotification(content) {
         notification.classList.add("notification", "disconnect");
     }
 
+    if (content.indexOf("say hi!") !== -1) {
+        notification.classList.add("notification", "connect")
+    }
+
     notification.textContent = content.toUpperCase();
     return notification;
 }

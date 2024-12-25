@@ -118,6 +118,11 @@ h3 {
     color: #2e7d32;
 }
 
+.name.other {
+    font-weight: bold;
+    color: #d772ff;
+}
+
 .notification {
     margin: 5px 0;
     font-weight: 300;
@@ -125,6 +130,14 @@ h3 {
     font-size: 12px;
     background-color: #bfbfee;
     color: #555;
+}
+
+.notification.connect {
+    background-color: #d0f0c0;
+}
+
+.notification.disconnect {
+    background-color: #ffb4b4;
 }
 
 
