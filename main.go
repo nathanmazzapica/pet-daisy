@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
 	"html/template"
@@ -33,6 +32,8 @@ var (
 
 type Client struct {
 	conn *websocket.Conn
+	id   string
+	user User
 }
 
 type ClientMessage struct {
@@ -44,7 +45,8 @@ func main() {
 
 	// load DB
 
-	db, err := sql.Open("sqlite3", "./data.db")
+	var err error
+	db, err = sql.Open("sqlite3", "./data.db")
 
 	if err != nil {
 		fmt.Println(err)
@@ -78,20 +80,21 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 	user_id, err := r.Cookie("user_id")
 	var userID string
+	var user *User
 
 	if err != nil {
 		switch {
 		case errors.Is(err, http.ErrNoCookie):
-			fmt.Println("hello, new user!")
-			newID := uuid.New().String()
-			fmt.Println("newID:", newID)
+
+			user = CreateNewUser()
+			fmt.Println("hello,", user.displayName)
+			fmt.Println("newID:", user.userID)
 			cookie := http.Cookie{
 				Name:     "user_id",
-				Value:    newID,
+				Value:    user.userID,
 				HttpOnly: true,
 			}
 			http.SetCookie(w, &cookie)
-			userID = newID
 		default:
 			fmt.Println(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
@@ -100,13 +103,28 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		userID = user_id.Value
+		user, err = GetUserFromDB(userID)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 	}
 
-	fmt.Printf("USER: {%s} CONNECTED\n", userID)
+	fmt.Printf("USER: {%s} CONNECTED\n", user.displayName)
+
+	data := struct {
+		User      string
+		UserPets  int
+		TotalPets int
+	}{
+		User:      user.displayName,
+		UserPets:  user.petCount,
+		TotalPets: counter,
+	}
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 
-	err = tmpl.Execute(w, nil)
+	err = tmpl.Execute(w, data)
 
 	if err != nil {
 		fmt.Println("error sending html", err)
@@ -116,6 +134,17 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("hello!")
 
+	userID, err := getUserID(r)
+	if err != nil {
+		fmt.Println("Could not retrieve user ID:", err)
+	}
+
+	user, err := GetUserFromDB(userID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
@@ -123,7 +152,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{conn: conn}
+	client := &Client{conn: conn, id: userID, user: *user}
 
 	defer func() {
 		mu.Lock()
@@ -148,18 +177,25 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	playerCountUpdate := ClientMessage{"playerCount", strconv.Itoa(len(clients))}
 
 	notifications <- newPetNotification()
-	notifications <- joinNotification
+	notifications <- playerJoinNotification(client.user.displayName)
 	notifications <- playerCountUpdate
 
-	readMessages(conn)
+	readMessages(client)
 
 }
 
-func readMessages(conn *websocket.Conn) {
+func readMessages(client *Client) {
+
+	conn := client.conn
 	for {
 		_, msg, err := conn.ReadMessage()
 
 		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+				fmt.Println("Client disconnected.")
+				notifications <- playerLeftNotification(client.user.displayName)
+				break
+			}
 			fmt.Println("error reading message:", err)
 			break
 		}
@@ -181,6 +217,7 @@ func readMessages(conn *websocket.Conn) {
 			counter++
 			mu.Unlock()
 			fmt.Println(clientMsg.Name, "pet daisy! She has now been pet: ", counter, "times.")
+			fmt.Println(client.user.displayName)
 
 			notifications <- newPetNotification()
 
@@ -258,6 +295,25 @@ func newMilestoneNotification() ClientMessage {
 
 func newAchievmentNotification(user string, count int) ClientMessage {
 	return ClientMessage{"server", fmt.Sprintf("%v has pet daisy %v times!", user, count)}
+}
+
+func playerJoinNotification(user string) ClientMessage {
+	return ClientMessage{"server", fmt.Sprintf("%v has joined! say hi!", user)}
+}
+
+func playerLeftNotification(user string) ClientMessage {
+	return ClientMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
+}
+
+// getUserID retrieves the User ID from the client request's cookie
+func getUserID(r *http.Request) (string, error) {
+	userID, err := r.Cookie("user_id")
+
+	if err != nil {
+		return "", err
+	}
+
+	return userID.Value, nil
 }
 
 // ping is a debug endpoint to test if the server is reachable

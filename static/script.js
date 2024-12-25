@@ -75,7 +75,7 @@ ws.onmessage = (event) => {
 function petDaisy() {
     personalPets++;
     petMessage = {
-        name: "nathan",
+        name: displayName,
         message: `$!pet;${personalPets}`,
     }
     ws.send(JSON.stringify(petMessage));
@@ -101,6 +101,10 @@ function displayServerChatNotification(content) {
     const notification = document.createElement("p");
     notification.classList.add("notification", "message");
 
+    if (content.indexOf(":(") !== -1) {
+        notification.classList.add("notification", "disconnect");
+    }
+
     notification.textContent = content.toUpperCase();
     return notification;
 }
@@ -109,7 +113,9 @@ function buildMessage(name, content) {
     const message = document.createElement("p");
     message.classList.add("message");
 
-    message.innerHTML = `<span class="name">${name}:</span> ${content}`;
+    const spanClass = `${name !== displayName ? 'name' + ' other' : 'name'}`
+
+    message.innerHTML = `<span class="${spanClass}">${name}:</span> ${content}`;
 
     return message;
 }
@@ -123,7 +129,7 @@ function sendMessage(message) {
     }
 
     chatMessage = {
-        name: "nathan",
+        name: displayName,
         message
     }
 

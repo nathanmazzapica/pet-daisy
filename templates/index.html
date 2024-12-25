@@ -7,7 +7,7 @@
     <title>Pet Daisy</title>
 </head>
 <body>
-    <h2 id="counter">Daisy has been pet {{ .Number }} times!</h2>
+    <h2 id="counter">Daisy has been pet {{ .TotalPets }} times!</h2>
     <h3 id="personal-counter">You have pet her 0 times!</h3>
     <div id="game-container">
         <div id="daisy-container">
@@ -19,7 +19,10 @@
             <input type="text" name="chat" id="chat-input">
         </div>
     </div>
-
+    <script>
+        let personalNumber = {{ .UserPets }};
+        let displayName = {{ .User }};
+    </script>
     <script src="../static/script.js"></script>
 </body>
 </html>
