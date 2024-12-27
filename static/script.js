@@ -7,8 +7,6 @@ const chatMessageContainer = document.getElementById("chat-message-container");
 
 const ws = new WebSocket("ws://localhost:8080/ws")
 
-let personalPets = 0;
-
 let daisyReferenceSize = {width: 894, height: 597};
 let referenceNoseCoordinates = {x: 349, y: 145};
 
@@ -26,10 +24,7 @@ daisy.addEventListener("click", (e) => {
         y: e.offsetY
     }
 
-
     checkAndPerformEasterEggs(mousePos);
-
-
     petDaisy();
 })
 
@@ -73,13 +68,13 @@ ws.onmessage = (event) => {
 }
 
 function petDaisy() {
-    personalPets++;
+    personalNumber++;
     petMessage = {
         name: displayName,
-        message: `$!pet;${personalPets}`,
+        message: `$!pet;${personalNumber}`,
     }
     ws.send(JSON.stringify(petMessage));
-    personalCounter.innerText = `You have pet her ${personalPets} time${personalPets === 1 ? "" : "s"}!`;
+    personalCounter.innerText = `You have pet her ${personalNumber} time${personalNumber === 1 ? "" : "s"}!`;
 }
 
 function checkAndPerformEasterEggs(mousePos) {
@@ -201,10 +196,8 @@ window.addEventListener("resize", () => {
 
     console.log(noseCoordinates.x)
     console.log(noseCoordinates.y)
-
-
-
 });
+
 window.addEventListener("load", () => {
         setGradientPosition();
 
@@ -226,7 +219,5 @@ window.addEventListener("load", () => {
         console.log(noseCoordinates.y)
 
         daisyReferenceSize = daisySize;
-
-
     }
 );

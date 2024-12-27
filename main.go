@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var db *sql.DB
@@ -24,7 +25,7 @@ var upgrader = websocket.Upgrader{
 
 var (
 	clients       = make(map[*Client]bool)
-	mu            sync.Mutex
+	mu            sync.RWMutex
 	counter       int
 	messages      = make(chan ClientMessage)
 	notifications = make(chan ClientMessage)
@@ -67,6 +68,7 @@ func main() {
 
 	go handleChatMessages()
 	go handleNotifications()
+	go autoSave()
 
 	fmt.Println("Hello, Daisy!")
 	err = http.ListenAndServe(":8080", nil)
@@ -191,12 +193,17 @@ func readMessages(client *Client) {
 		_, msg, err := conn.ReadMessage()
 
 		if err != nil {
+			if saveError := client.user.SaveToDB(); saveError != nil {
+				fmt.Println("Error saving user to db:", saveError)
+				// we should still try again
+			}
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 				fmt.Println("Client disconnected.")
 				notifications <- playerLeftNotification(client.user.displayName)
 				break
 			}
 			fmt.Println("error reading message:", err)
+
 			break
 		}
 
@@ -217,6 +224,8 @@ func readMessages(client *Client) {
 			counter++
 			mu.Unlock()
 			fmt.Println(clientMsg.Name, "pet daisy! She has now been pet: ", counter, "times.")
+			client.user.petCount++
+			fmt.Println("client.user.petCount:", client.user.petCount)
 			fmt.Println(client.user.displayName)
 
 			notifications <- newPetNotification()
@@ -239,6 +248,22 @@ func readMessages(client *Client) {
 			messages <- clientMsg
 		}
 
+	}
+}
+
+func autoSave() {
+	for {
+		fmt.Println("poop")
+		time.Sleep(5 * time.Minute)
+		mu.RLock()
+		for client := range clients {
+			if err := client.user.SaveToDB(); err != nil {
+				fmt.Printf("Error saving user %s to db: %v\nWill retry next autosave", client.user.displayName, err)
+				continue
+			}
+			fmt.Printf("Saved user %s to db\n", client.user.displayName)
+		}
+		mu.RUnlock()
 	}
 }
 

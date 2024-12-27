@@ -49,6 +49,8 @@ func GetUserFromDB(userID string) (*User, error) {
 		return nil, err
 	}
 
+	user.exists = true
+
 	return user, nil
 }
 
@@ -63,6 +65,7 @@ func (u *User) SaveToDB() error {
 	}
 
 	if u.exists {
+		fmt.Println("user already exists, saving pets")
 		_, err := db.Exec("UPDATE users SET pets = ? WHERE user_id = ? ", u.petCount, u.userID)
 
 		return err
