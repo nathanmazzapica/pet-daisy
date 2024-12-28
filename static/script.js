@@ -112,9 +112,13 @@ function buildMessage(name, content) {
     const message = document.createElement("p");
     message.classList.add("message");
 
+    const sender = document.createElement("span")
     const spanClass = `${name !== displayName ? 'name' + ' other' : 'name'}`
+    sender.innerText = `${name}: `;
+    sender.classList.add(spanClass);
 
-    message.innerHTML = `<span class="${spanClass}">${name}:</span> ${content}`;
+    message.textContent = content;
+    message.prepend(sender);
 
     return message;
 }
@@ -179,9 +183,10 @@ function debugCircle(coordinate, id) {
 }
 
 window.addEventListener("resize", () => {
+    const SCALE_OFFSET = 0.87
     setGradientPosition();
 
-    let daisySize = {width: daisy.width * 0.87, height: daisy.height * 0.87};
+    let daisySize = {width: daisy.width * SCALE_OFFSET, height: daisy.height * SCALE_OFFSET};
     console.log(daisySize)
 
     let ratio = {
@@ -199,9 +204,10 @@ window.addEventListener("resize", () => {
 });
 
 window.addEventListener("load", () => {
+        const SCALE_OFFSET = 0.87
         setGradientPosition();
 
-        let daisySize = {width: daisy.width * 0.87, height: daisy.height * 0.87};
+        let daisySize = {width: daisy.width * SCALE_OFFSET, height: daisy.height * SCALE_OFFSET};
 
         let ratio = {
             width: daisySize.width / daisyReferenceSize.width,
