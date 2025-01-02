@@ -1,3 +1,8 @@
+/**
+ *  @typedef {{x: number, y: number}} coordinate
+ */
+
+
 const daisyContainer = document.getElementById('daisy-container');
 const daisy = document.getElementById("daisy-image");
 const counter = document.getElementById("counter");
@@ -10,6 +15,7 @@ const ws = new WebSocket("ws://localhost:8080/ws")
 let daisyReferenceSize = {width: 894, height: 597};
 let referenceNoseCoordinates = {x: 349, y: 145};
 
+/** @type {coordinate} */
 const noseCoordinates = {x: 349, y: 145};
 const noseHonk = new Audio("../static/honk.mp3");
 
@@ -43,17 +49,17 @@ ws.onopen = () => {
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    if (data.name == "petCounter") {
+    if (data.name === "petCounter") {
         counter.textContent = `Daisy has been pet ${data.message} times!`
         return;
     }
 
-    if (data.name == "playerCount") {
+    if (data.name === "playerCount") {
         console.log("handle player count!")
         return;
     }
 
-    if (data.name == "server") {
+    if (data.name === "server") {
         console.log("handle server notification")
         console.log(data.message)
         chatMessageContainer.appendChild(displayServerChatNotification(data.message));
@@ -67,6 +73,10 @@ ws.onmessage = (event) => {
 
 }
 
+ws.onclose = () => {
+    alert("Something has gone horribly wrong... Please refresh the page.")
+}
+
 function petDaisy() {
     personalNumber++;
     petMessage = {
@@ -76,6 +86,10 @@ function petDaisy() {
     ws.send(JSON.stringify(petMessage));
     personalCounter.innerText = `You have pet her ${personalNumber} time${personalNumber === 1 ? "" : "s"}!`;
 }
+
+/**
+ * @param {coordinate} mousePos
+ */
 
 function checkAndPerformEasterEggs(mousePos) {
     console.log(mousePos);
@@ -146,7 +160,7 @@ function setGradientPosition() {
     const centerY = daisyRect.top + daisyRect.height / 2;
 
     document.body.style.background = `
-        radial-gradient(circle at ${centerX}px ${centerY}px, #d0f0c0 1%, #0e250f)
+        radial-gradient(circle at ${centerX}px ${centerY}px, var(--daisy-gradient-start) 1%, var(--daisy-gradient-end) 100%
     `;
 }
 

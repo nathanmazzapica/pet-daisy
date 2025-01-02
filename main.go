@@ -59,6 +59,8 @@ func main() {
 	result := db.QueryRow("SELECT SUM(pets) FROM users")
 	result.Scan(&counter)
 
+	fmt.Println(GetTopX(5)[0])
+
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", serveHome)
 
@@ -230,11 +232,7 @@ func readMessages(client *Client) {
 
 			notifications <- newPetNotification()
 
-			personal, err := strconv.Atoi(strings.Split(clientMsg.Message, ";")[1])
-
-			if err != nil {
-				fmt.Print("Could not parse %v into a pet count", clientMsg.Message)
-			}
+			personal := client.user.petCount
 
 			if personal == 10 || personal == 50 || personal == 100 || personal == 500 || personal%1000 == 0 {
 				notifications <- newAchievmentNotification(clientMsg.Name, personal)
@@ -253,7 +251,6 @@ func readMessages(client *Client) {
 
 func autoSave() {
 	for {
-		fmt.Println("poop")
 		time.Sleep(5 * time.Minute)
 		mu.RLock()
 		for client := range clients {
@@ -264,6 +261,7 @@ func autoSave() {
 			fmt.Printf("Saved user %s to db\n", client.user.displayName)
 		}
 		mu.RUnlock()
+		fmt.Println("Autosave complete.")
 	}
 }
 
