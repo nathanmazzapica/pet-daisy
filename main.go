@@ -16,6 +16,7 @@ import (
 )
 
 var db *sql.DB
+var topPlayers []LeaderboardRowData
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -59,7 +60,7 @@ func main() {
 	result := db.QueryRow("SELECT SUM(pets) FROM users")
 	result.Scan(&counter)
 
-	fmt.Println(GetTopX(5)[0])
+	topPlayers = GetTopX(5)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", serveHome)
@@ -97,6 +98,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 				Name:     "user_id",
 				Value:    user.userID,
 				HttpOnly: true,
+				Expires:  time.Now().AddDate(1, 0, 0),
 			}
 			http.SetCookie(w, &cookie)
 		default:
@@ -230,7 +232,16 @@ func readMessages(client *Client) {
 			fmt.Println("client.user.petCount:", client.user.petCount)
 			fmt.Println(client.user.displayName)
 
+			client.user.SaveToDB()
+
 			notifications <- newPetNotification()
+
+			newData := GetTopX(5)
+
+			if shouldSend := leaderboardNeedsUpdate(newData); shouldSend {
+				fmt.Println("Leaderboard needs updating, now!")
+				// send the updated data
+			}
 
 			personal := client.user.petCount
 
@@ -339,8 +350,39 @@ func getUserID(r *http.Request) (string, error) {
 	return userID.Value, nil
 }
 
+// leaderboardNeedsUpdate is a helper function that determines whether we should send the result of GetTopX to the client
+// This needs to be fleshed out a little bit
+// Should be true if...
+// 1. A new player enters top players
+// 2. A top player's pet count increases
+//
+// I want to avoid querying the DB for every pet, it sounds expensive.
+// I am going to learn more about SQL before I proceed
+func leaderboardNeedsUpdate(newData []LeaderboardRowData) bool {
+	for i := 0; i < len(newData); i++ {
+		fmt.Println("checking")
+		fmt.Println("new: ", newData[i], "old: ", topPlayers[i])
+		if newData[i] != topPlayers[i] {
+			topPlayers = newData
+			return true
+		}
+	}
+
+	return false
+}
+
 // ping is a debug endpoint to test if the server is reachable
 func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("pong")
-	w.Write([]byte("pong"))
+
+	top := GetTopX(5)
+
+	data, err := json.Marshal(top)
+
+	if err != nil {
+		fmt.Println("error encoding json:", err)
+		return
+	}
+
+	w.Write(data)
 }
