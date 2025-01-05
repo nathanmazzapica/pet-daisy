@@ -10,6 +10,18 @@
     <h2 id="counter">Daisy has been pet {{ .TotalPets }} times!</h2>
     <h3 id="personal-counter">You have pet her {{ .UserPets }} times!</h3>
     <div id="game-container">
+        <div id="leaderboard-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>Place</th>
+                    <th>Display Name</th>
+                    <th>Pet Count</th>
+                </tr>
+                </thead>
+                <tbody id="leaderboard"></tbody>
+            </table>
+        </div>
         <div id="daisy-container">
             <img src="../static/DAISY.png" alt="daisy the dog" id="daisy-image"/>
         </div>

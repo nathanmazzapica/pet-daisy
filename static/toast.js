@@ -23,4 +23,4 @@ function destroyToast(toast) {
     }, 600);
 }
 
-displayToast("Achievment", "Nathan has pet daisy 10,000 times!", 3500);
+//displayToast("Achievment", "Nathan has pet daisy 10,000 times!", 3500);

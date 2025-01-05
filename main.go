@@ -25,11 +25,12 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	clients       = make(map[*Client]bool)
-	mu            sync.RWMutex
-	counter       int
-	messages      = make(chan ClientMessage)
-	notifications = make(chan ClientMessage)
+	clients        = make(map[*Client]bool)
+	mu             sync.RWMutex
+	counter        int
+	messages       = make(chan ClientMessage)
+	notifications  = make(chan ClientMessage)
+	topPlayerCount = 10
 )
 
 type Client struct {
@@ -60,7 +61,7 @@ func main() {
 	result := db.QueryRow("SELECT SUM(pets) FROM users")
 	result.Scan(&counter)
 
-	topPlayers = GetTopX(5)
+	topPlayers = GetTopX(topPlayerCount)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", serveHome)
@@ -186,6 +187,10 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	notifications <- playerJoinNotification(client.user.displayName)
 	notifications <- playerCountUpdate
 
+	data, err := json.Marshal(topPlayers)
+
+	notifications <- ClientMessage{"leaderboard", string(data)}
+
 	readMessages(client)
 
 }
@@ -236,7 +241,19 @@ func readMessages(client *Client) {
 
 			notifications <- newPetNotification()
 
-			newData := GetTopX(5)
+			newData := GetTopX(topPlayerCount)
+
+			// temporary
+
+			data, err := json.Marshal(newData)
+
+			if err != nil {
+				fmt.Println("error encoding json:", err)
+			}
+
+			notifications <- ClientMessage{Name: "leaderboard", Message: string(data)}
+
+			// temporary
 
 			if shouldSend := leaderboardNeedsUpdate(newData); shouldSend {
 				fmt.Println("Leaderboard needs updating, now!")
@@ -375,7 +392,7 @@ func leaderboardNeedsUpdate(newData []LeaderboardRowData) bool {
 func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("pong")
 
-	top := GetTopX(5)
+	top := GetTopX(topPlayerCount)
 
 	data, err := json.Marshal(top)
 

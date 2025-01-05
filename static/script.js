@@ -2,6 +2,11 @@
  *  @typedef {{x: number, y: number}} coordinate
  */
 
+/**
+ *
+ * @typedef {{display_name: string, pet_count: number, position: number}} leaderboardData
+ */
+
 
 const daisyContainer = document.getElementById('daisy-container');
 const daisy = document.getElementById("daisy-image");
@@ -18,10 +23,14 @@ let referenceNoseCoordinates = {x: 349, y: 145};
 /** @type {coordinate} */
 const noseCoordinates = {x: 349, y: 145};
 const noseHonk = new Audio("../static/honk.mp3");
+noseHonk.volume = 0.1;
+let nextHonk = 0;
 
+/*
 const leftEyeCoordinate = {x: 320, y: 215};
 const rightEyeCoordinate = {x: 505, y: 157};
 const eyeOuch = new Audio("../static/ouch.mp3");
+ */
 
 daisy.addEventListener("click", (e) => {
 
@@ -62,7 +71,15 @@ ws.onmessage = (event) => {
     if (data.name === "server") {
         console.log("handle server notification")
         console.log(data.message)
+        displayToast("Notification", data.message, 2000);
         chatMessageContainer.appendChild(displayServerChatNotification(data.message));
+        return;
+    }
+
+    if (data.name === "leaderboard") {
+        console.log("handle leaderboard notification")
+        console.log(JSON.parse(data.message));
+        displayLeaderboard(JSON.parse(data.message));
         return;
     }
 
@@ -93,16 +110,48 @@ function petDaisy() {
 
 function checkAndPerformEasterEggs(mousePos) {
     console.log(mousePos);
-    if (inRadius(mousePos, noseCoordinates, 20)) {
+    if (inRadius(mousePos, noseCoordinates, 20) && nextHonk <= Date.now()) {
         console.log("honk");
         noseHonk.currentTime = 0;
         noseHonk.play();
+        nextHonk = Date.now() + 500;
     }
 
+    /*
     if (inRadius(mousePos, leftEyeCoordinate, 25) || inRadius(mousePos, rightEyeCoordinate, 5)) {
         console.log("ouch")
         eyeOuch.currentTime = 0;
         eyeOuch.play();
+    }
+     */
+}
+
+/**
+ * @param {leaderboardData[]} data
+ * */
+function displayLeaderboard(data) {
+
+    const leaderboard = document.getElementById('leaderboard');
+    leaderboard.innerHTML = '';
+    for (let i = 0; i < data.length; i++) {
+        const row = document.createElement('tr');
+        const posCol = document.createElement('td');
+        const displayNameCol = document.createElement('td');
+        const petsCol = document.createElement('td');
+
+        posCol.innerText = `${data[i].position}`;
+        displayNameCol.innerText = `${data[i].display_name}`;
+        petsCol.innerText = `${data[i].pet_count}`;
+
+        if (data[i].display_name === displayName) {
+            row.style.backgroundColor = 'var(--dark-purple-bg)';
+        }
+
+        row.appendChild(posCol);
+        row.appendChild(displayNameCol);
+        row.appendChild(petsCol);
+
+        leaderboard.appendChild(row);
     }
 }
 
