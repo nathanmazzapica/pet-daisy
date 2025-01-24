@@ -75,7 +75,7 @@ func main() {
 	go autoSave()
 
 	fmt.Println("Hello, Daisy!")
-	err = http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":80", nil)
 
 	if err != nil {
 		fmt.Println("something messed up, shutting er down.")
@@ -84,7 +84,7 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 
-	user_id, err := r.Cookie("user_id")
+	user_id, err := r.Cookie("user_id_daisy")
 	var userID string
 	var user *User
 
@@ -96,10 +96,11 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("hello,", user.displayName)
 			fmt.Println("newID:", user.userID)
 			cookie := http.Cookie{
-				Name:     "user_id",
+				Name:     "user_id_daisy",
 				Value:    user.userID,
 				HttpOnly: true,
 				Expires:  time.Now().AddDate(1, 0, 0),
+				Domain:   ".pethenry.com",
 			}
 			http.SetCookie(w, &cookie)
 		default:
@@ -140,6 +141,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("hello!")
+	fmt.Println("Cookie header:", r.Header.Get("Cookie"))
 
 	userID, err := getUserID(r)
 	if err != nil {
@@ -358,7 +360,7 @@ func playerLeftNotification(user string) ClientMessage {
 
 // getUserID retrieves the User ID from the client request's cookie
 func getUserID(r *http.Request) (string, error) {
-	userID, err := r.Cookie("user_id")
+	userID, err := r.Cookie("user_id_daisy")
 
 	if err != nil {
 		return "", err

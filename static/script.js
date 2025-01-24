@@ -15,7 +15,7 @@ const personalCounter = document.getElementById("personal-counter");
 const chatInput = document.getElementById("chat-input");
 const chatMessageContainer = document.getElementById("chat-message-container");
 
-const ws = new WebSocket("ws://localhost:8080/ws")
+const ws = new WebSocket("ws://localhost:80/ws")
 
 let daisyReferenceSize = {width: 894, height: 597};
 let referenceNoseCoordinates = {x: 349, y: 145};
@@ -176,9 +176,12 @@ function buildMessage(name, content) {
     message.classList.add("message");
 
     const sender = document.createElement("span")
-    const spanClass = `${name !== displayName ? 'name' + ' other' : 'name'}`
     sender.innerText = `${name}: `;
-    sender.classList.add(spanClass);
+
+    sender.classList.add('name');
+    if (name !== displayName) {
+        sender.classList.add('other')
+    }
 
     message.textContent = content;
     message.prepend(sender);
