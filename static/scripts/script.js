@@ -1,20 +1,4 @@
-/**
- *  @typedef {{x: number, y: number}} coordinate
- */
-
-/**
- *
- * @typedef {{display_name: string, pet_count: number, position: number}} leaderboardData
- */
-
-
-const daisyContainer = document.getElementById('daisy-container');
-const daisy = document.getElementById("daisy-image");
-const counter = document.getElementById("counter");
-const personalCounter = document.getElementById("personal-counter");
-const chatInput = document.getElementById("chat-input");
-const chatMessageContainer = document.getElementById("chat-message-container");
-
+// TODO: export to .env
 const ws = new WebSocket("ws://localhost:80/ws")
 
 let daisyReferenceSize = {width: 894, height: 597};
@@ -26,11 +10,6 @@ const noseHonk = new Audio("../static/honk.mp3");
 noseHonk.volume = 0.1;
 let nextHonk = 0;
 
-/*
-const leftEyeCoordinate = {x: 320, y: 215};
-const rightEyeCoordinate = {x: 505, y: 157};
-const eyeOuch = new Audio("../static/ouch.mp3");
- */
 
 daisy.addEventListener("click", (e) => {
 
@@ -43,12 +22,6 @@ daisy.addEventListener("click", (e) => {
     petDaisy();
 })
 
-chatInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-        sendMessage(chatInput.value);
-        chatInput.value = "";
-    }
-})
 
 ws.onopen = () => {
     console.log("Connected to the server!");
@@ -73,6 +46,7 @@ ws.onmessage = (event) => {
         console.log(data.message)
         displayToast("Notification", data.message, 2000);
         chatMessageContainer.appendChild(displayServerChatNotification(data.message));
+        chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
         return;
     }
 
@@ -80,6 +54,7 @@ ws.onmessage = (event) => {
         console.log("handle leaderboard notification")
         console.log(JSON.parse(data.message));
         displayLeaderboard(JSON.parse(data.message));
+        chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
         return;
     }
 
@@ -116,93 +91,6 @@ function checkAndPerformEasterEggs(mousePos) {
         noseHonk.play();
         nextHonk = Date.now() + 500;
     }
-
-    /*
-    if (inRadius(mousePos, leftEyeCoordinate, 25) || inRadius(mousePos, rightEyeCoordinate, 5)) {
-        console.log("ouch")
-        eyeOuch.currentTime = 0;
-        eyeOuch.play();
-    }
-     */
-}
-
-/**
- * @param {leaderboardData[]} data
- * */
-function displayLeaderboard(data) {
-
-    const leaderboard = document.getElementById('leaderboard');
-    leaderboard.innerHTML = '';
-    for (let i = 0; i < data.length; i++) {
-        const row = document.createElement('tr');
-        const posCol = document.createElement('td');
-        const displayNameCol = document.createElement('td');
-        const petsCol = document.createElement('td');
-
-        posCol.innerText = `${data[i].position}`;
-        displayNameCol.innerText = `${data[i].display_name}`;
-        petsCol.innerText = `${data[i].pet_count}`;
-
-        if (data[i].display_name === displayName) {
-            row.style.backgroundColor = 'var(--dark-purple-bg)';
-        }
-
-        row.appendChild(posCol);
-        row.appendChild(displayNameCol);
-        row.appendChild(petsCol);
-
-        leaderboard.appendChild(row);
-    }
-}
-
-function displayServerChatNotification(content) {
-    const notification = document.createElement("p");
-    notification.classList.add("notification", "message");
-
-    if (content.indexOf(":(") !== -1) {
-        notification.classList.add("notification", "disconnect");
-    }
-
-    if (content.indexOf("say hi!") !== -1) {
-        notification.classList.add("notification", "connect")
-    }
-
-    notification.textContent = content.toUpperCase();
-    return notification;
-}
-
-function buildMessage(name, content) {
-    const message = document.createElement("p");
-    message.classList.add("message");
-
-    const sender = document.createElement("span")
-    sender.innerText = `${name}: `;
-
-    sender.classList.add('name');
-    if (name !== displayName) {
-        sender.classList.add('other')
-    }
-
-    message.textContent = content;
-    message.prepend(sender);
-
-    return message;
-}
-
-function sendMessage(message) {
-
-    message = message.trim();
-
-    if (message === null || message.length === 0) {
-        return;
-    }
-
-    chatMessage = {
-        name: displayName,
-        message
-    }
-
-    ws.send(JSON.stringify(chatMessage));
 }
 
 function setGradientPosition() {
@@ -222,35 +110,14 @@ function inRadius(point1, point2, radius) {
     return dist <= radius;
 }
 
-function debugCircle(coordinate, id) {
-    const circle = document.createElement("div");
-
-    const rect = daisyContainer.getBoundingClientRect();
-    let x = coordinate.x - rect.left;
-    let y = coordinate.y - rect.top;
-
-    circle.style.width = '20px';
-    circle.style.height = '20px';
-    circle.style.backgroundColor = 'red';
-    circle.style.borderRadius = '50%';
-    circle.style.position = 'absolute';
-    circle.style.left = `${coordinate.x}px`;
-    circle.style.top = `${coordinate.y}px`;
-    circle.style.zIndex = '99999';
-    circle.style.transform = 'translate(-50%, -50%)';
-
-    if (id) {
-        circle.id = id
-    }
-
-
-    daisy.appendChild(circle);
-
-}
 
 window.addEventListener("resize", () => {
     const SCALE_OFFSET = 0.87
-    setGradientPosition();
+    if (window.innerWidth > 1000) {
+        setGradientPosition();
+    } else {
+        document.body.style.background = "var(--daisy-gradient-end)";
+    }
 
     let daisySize = {width: daisy.width * SCALE_OFFSET, height: daisy.height * SCALE_OFFSET};
     console.log(daisySize)
@@ -271,7 +138,12 @@ window.addEventListener("resize", () => {
 
 window.addEventListener("load", () => {
         const SCALE_OFFSET = 0.87
-        setGradientPosition();
+
+        if (window.innerWidth > 1000) {
+            setGradientPosition();
+        } else {
+            document.body.style.background = "var(--daisy-gradient-end)";
+        }
 
         let daisySize = {width: daisy.width * SCALE_OFFSET, height: daisy.height * SCALE_OFFSET};
 

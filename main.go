@@ -65,6 +65,7 @@ func main() {
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", serveHome)
+	//http.HandleFunc("/profile", serveProfile)
 
 	http.HandleFunc("/ws", handleConnections)
 
@@ -219,6 +220,11 @@ func readMessages(client *Client) {
 		}
 
 		fmt.Println(string(msg))
+
+		if len(msg) > 512 {
+			fmt.Println("Client message is too large, discarding")
+			continue
+		}
 
 		var clientMsg ClientMessage
 

@@ -1,0 +1,15 @@
+:root {
+    --henry-gradient-start: #ffd260;
+    --henry-gradient-end: #ff9b3a;
+    --henry-shadow: #ff9060;
+
+    --daisy-gradient-start: #d0f0c0;
+    --daisy-gradient-end: #0e250f;
+    --daisy-shadow: #2e7d32;
+
+    --soft-purple-bg: #E6E6FA;
+    --dark-purple-bg: #bfbfee;
+
+    --notification-positive: #d0f0c0;
+    --notification-negative: #ffb4b4;
+}
