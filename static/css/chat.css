@@ -39,8 +39,8 @@
         height: 300px;
         width: 100%;
         margin: 0 auto;
-        overflow-y: auto; /* Ensures chat stays scrollable if content overflows */
-        border: 1px solid #ccc; /* Optional: Add a border for better definition */
+        overflow-y: auto;
+        border: 1px solid #ccc;
         border-radius: 8px;
         padding: 10px;
     }
