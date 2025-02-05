@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"math/rand"
+	"net/http"
 )
+
+const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 type User struct {
 	userID      string `field:"user_id"`
@@ -79,10 +82,30 @@ func (u *User) SaveToDB() error {
 	return err
 }
 
+// GetUserID retrieves the User ID from the client request's cookie
+func GetUserID(r *http.Request) (string, error) {
+	userID, err := r.Cookie("user_id_daisy")
+
+	if err != nil {
+		return "", err
+	}
+
+	return userID.Value, nil
+}
+
 // getRandomZeroNumber returns a random number padded with 0s
 func getRandomZeroNumber() string {
 	n := rand.Intn(1_000)
 	return fmt.Sprintf("%04d", n)
+}
+
+// generateSyncCode generates a random 6 digit 'syncCode' used for account recovery/syncing
+func generateSyncCode() string {
+	code := make([]byte, 6)
+	for i := range code {
+		code[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(code)
 }
 
 func getRandomDisplayName() string {

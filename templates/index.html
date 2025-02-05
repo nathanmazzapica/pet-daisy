@@ -14,6 +14,14 @@
     <h2 id="counter">Daisy has been pet {{ .TotalPets }} times!</h2>
     <h3 id="personal-counter">You have pet her {{ .UserPets }} times!</h3>
     <div id="game-container">
+        <div id="chat-container">
+            <div id="chat-message-container"></div>
+            <input type="text" name="chat" id="chat-input">
+            <p id="player-count" style="padding: 0 10px 8px; margin: 0;">Online Petters: 0</p>
+        </div>
+        <div id="daisy-container">
+            <img src="../static/images/DAISY.png" alt="daisy the dog" id="daisy-image"/>
+        </div>
         <div id="leaderboard-container">
             <table>
                 <thead>
@@ -26,20 +34,31 @@
                 <tbody id="leaderboard"></tbody>
             </table>
         </div>
-        <div id="daisy-container">
-            <img src="../static/images/DAISY.png" alt="daisy the dog" id="daisy-image"/>
-        </div>
-        <div id="chat-container">
-            <div id="chat-message-container">
-            </div>
-            <input type="text" name="chat" id="chat-input">
-        </div>
     </div>
 
     <div class="hidden" id="modal-container">
         <div id="modal">
-            <h2>{{.User}}</h2>
+            <h2>Roadmap</h2>
             <button id="close-modal" type="button" onclick="closeModal()">Close</button>
+            <ul>
+                <li>Ability to change display name</li>
+                <li>Achievements</li>
+                <li>Newsfeed?</li>
+                <li>Full leaderboard?</li>
+            </ul>
+
+            <h2>Controls</h2>
+            <hr>
+            <form style="display: flex; justify-content: space-between; flex-direction: column;">
+                <div class="control-group">
+                    <label for="chat-toggle">Show Chat</label>
+                    <input type="checkbox" id="chat-toggle" checked />
+                </div>
+                <div class="control-group">
+                    <label for="leaderboard-toggle">Show Leaderboard</label>
+                    <input type="checkbox" id="leaderboard-toggle" checked />
+                </div>
+            </form>
         </div>
     </div>
 

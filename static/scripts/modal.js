@@ -10,3 +10,61 @@ function openModal() {
 function closeModal() {
     modalContainer.classList.add('hidden')
 }
+
+// put somewhere better later
+
+const chatToggle = document.getElementById('chat-toggle');
+const leaderboardToggle = document.getElementById('leaderboard-toggle');
+
+let lbEnabled = true;
+let chatEnabled = true;
+
+
+// TODO: Make good
+function checkResize() {
+    setGradientPosition();
+    if (!lbEnabled && !chatEnabled) {
+        daisyContainer.style.width = "45%";
+        return;
+    }
+
+    daisyContainer.style.width = "30%";
+
+    if (isMobileDevice()) {
+        daisyContainer.style.width = "25%";
+    }
+}
+
+leaderboardToggle.addEventListener('change', () => {
+    const leaderboard = document.getElementById('leaderboard-container');
+    leaderboard.classList.toggle('hidden');
+    lbEnabled = !lbEnabled;
+    checkResize();
+});
+
+chatToggle.addEventListener('change', () => {
+    const chat = document.getElementById('chat-container')
+    chat.classList.toggle('hidden')
+    chatEnabled = !chatEnabled;
+    checkResize();
+})
+
+function isMobileDevice() {
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || window.matchMedia("(max-width: 768px)").matches;
+}
+
+if (isMobileDevice()) {
+    const chat = document.getElementById('chat-container')
+    chat.classList.toggle('hidden')
+    chatEnabled = false;
+    chatToggle.checked = false;
+
+    const leaderboard = document.getElementById('leaderboard-container');
+    leaderboard.classList.toggle('hidden');
+    lbEnabled = false;
+    leaderboardToggle.checked = false;
+
+
+    checkResize();
+}

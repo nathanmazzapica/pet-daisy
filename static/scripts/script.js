@@ -32,12 +32,15 @@ ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
     if (data.name === "petCounter") {
-        counter.textContent = `Daisy has been pet ${data.message} times!`
+        let prettyCount = Number(data.message).toLocaleString()
+        counter.textContent = `Daisy has been pet ${prettyCount} times!`
         return;
     }
 
     if (data.name === "playerCount") {
         console.log("handle player count!")
+        console.log(data.message);
+        document.getElementById("player-count").innerText = `Online Players: ${data.message}`;
         return;
     }
 
@@ -93,16 +96,6 @@ function checkAndPerformEasterEggs(mousePos) {
     }
 }
 
-function setGradientPosition() {
-    const daisyRect = daisy.getBoundingClientRect();
-
-    const centerX = daisyRect.left + daisyRect.width / 2;
-    const centerY = daisyRect.top + daisyRect.height / 2;
-
-    document.body.style.background = `
-        radial-gradient(circle at ${centerX}px ${centerY}px, var(--daisy-gradient-start) 1%, var(--daisy-gradient-end) 100%
-    `;
-}
 
 function inRadius(point1, point2, radius) {
     const dist = Math.sqrt(Math.pow((point2.x - point1.x), 2) + Math.pow((point2.y - point1.y), 2));
@@ -113,7 +106,7 @@ function inRadius(point1, point2, radius) {
 
 window.addEventListener("resize", () => {
     const SCALE_OFFSET = 0.87
-    if (window.innerWidth > 1000) {
+    if (window.innerWidth > 0) {
         setGradientPosition();
     } else {
         document.body.style.background = "var(--daisy-gradient-end)";
@@ -139,7 +132,7 @@ window.addEventListener("resize", () => {
 window.addEventListener("load", () => {
         const SCALE_OFFSET = 0.87
 
-        if (window.innerWidth > 1000) {
+        if (window.innerWidth > 0) {
             setGradientPosition();
         } else {
             document.body.style.background = "var(--daisy-gradient-end)";

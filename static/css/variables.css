@@ -1,4 +1,5 @@
 :root {
+    /* colors */
     --henry-gradient-start: #ffd260;
     --henry-gradient-end: #ff9b3a;
     --henry-shadow: #ff9060;
@@ -12,4 +13,8 @@
 
     --notification-positive: #d0f0c0;
     --notification-negative: #ffb4b4;
+
+    /* border */
+    --daisy-border: 3px solid var(--dark-purple-bg);
+    --container-border-radius: 8px;
 }

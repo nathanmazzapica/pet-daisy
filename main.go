@@ -64,10 +64,10 @@ func main() {
 	topPlayers = GetTopX(topPlayerCount)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.HandleFunc("/", serveHome)
+	http.HandleFunc("/", ServeHome)
 	//http.HandleFunc("/profile", serveProfile)
 
-	http.HandleFunc("/ws", handleConnections)
+	http.HandleFunc("/ws", HandleConnections)
 
 	http.HandleFunc("/ping", ping)
 
@@ -83,7 +83,7 @@ func main() {
 	}
 }
 
-func serveHome(w http.ResponseWriter, r *http.Request) {
+func ServeHome(w http.ResponseWriter, r *http.Request) {
 
 	user_id, err := r.Cookie("user_id_daisy")
 	var userID string
@@ -96,12 +96,19 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 			user = CreateNewUser()
 			fmt.Println("hello,", user.displayName)
 			fmt.Println("newID:", user.userID)
+
+			domain := ""
+
+			if strings.Contains(r.Host, "pethenry.com") {
+				domain = ".pethenry.com"
+			}
+
 			cookie := http.Cookie{
 				Name:     "user_id_daisy",
 				Value:    user.userID,
 				HttpOnly: true,
 				Expires:  time.Now().AddDate(1, 0, 0),
-				Domain:   ".pethenry.com",
+				Domain:   domain,
 			}
 			http.SetCookie(w, &cookie)
 		default:
@@ -140,11 +147,11 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
+func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("hello!")
 	fmt.Println("Cookie header:", r.Header.Get("Cookie"))
 
-	userID, err := getUserID(r)
+	userID, err := GetUserID(r)
 	if err != nil {
 		fmt.Println("Could not retrieve user ID:", err)
 	}
@@ -274,7 +281,7 @@ func readMessages(client *Client) {
 				notifications <- newAchievmentNotification(clientMsg.Name, personal)
 			}
 
-			if counter%100 == 0 {
+			if counter%1000 == 0 {
 				notifications <- newMilestoneNotification()
 			}
 
@@ -309,7 +316,6 @@ func handleNotifications() {
 		for client := range clients {
 			sendJSONToClient(client, newNotification)
 		}
-
 	}
 }
 
@@ -362,17 +368,6 @@ func playerJoinNotification(user string) ClientMessage {
 
 func playerLeftNotification(user string) ClientMessage {
 	return ClientMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
-}
-
-// getUserID retrieves the User ID from the client request's cookie
-func getUserID(r *http.Request) (string, error) {
-	userID, err := r.Cookie("user_id_daisy")
-
-	if err != nil {
-		return "", err
-	}
-
-	return userID.Value, nil
 }
 
 // leaderboardNeedsUpdate is a helper function that determines whether we should send the result of GetTopX to the client
