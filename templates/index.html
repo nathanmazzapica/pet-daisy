@@ -38,6 +38,17 @@
 
     <div class="hidden" id="modal-container">
         <div id="modal">
+            <div>
+                <h2>Sync Code: <span style="font-family: monospace;">{{ .SyncCode }}</span></h2>
+                <p>You can use this code to sync between devices or recover data. Store it somewhere nice.</p>
+                <form id="sync-code-form">
+                    <div class="control-group">
+                        <label for="sync-code-input">Sync Code</label>
+                        <input type="text" id="sync-code-input" />
+                    </div>
+                </form> 
+            </div>
+            <hr>
             <h2>Roadmap</h2>
             <button id="close-modal" type="button" onclick="closeModal()">Close</button>
             <ul>
@@ -65,6 +76,7 @@
     <script>
         let personalNumber = {{ .UserPets }};
         let displayName = {{ .User }};
+        const wsURL = {{ .WS_URL }};
     </script>
     <script src="../static/scripts/shared.js"></script>
     <script src="../static/scripts/chat.js"></script>

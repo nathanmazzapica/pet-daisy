@@ -6,9 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"html/template"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +20,7 @@ import (
 )
 
 var db *sql.DB
+var WS_URL string
 var topPlayers []LeaderboardRowData
 
 var upgrader = websocket.Upgrader{
@@ -34,9 +39,10 @@ var (
 )
 
 type Client struct {
-	conn *websocket.Conn
-	id   string
-	user User
+	conn        *websocket.Conn
+	id          string
+	user        User
+	lastPetTime time.Time
 }
 
 type ClientMessage struct {
@@ -65,6 +71,7 @@ func main() {
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", ServeHome)
+	http.HandleFunc("/sync", PostSyncCode)
 	//http.HandleFunc("/profile", serveProfile)
 
 	http.HandleFunc("/ws", HandleConnections)
@@ -76,11 +83,88 @@ func main() {
 	go autoSave()
 
 	fmt.Println("Hello, Daisy!")
-	err = http.ListenAndServe(":80", nil)
+
+	err = godotenv.Load()
+
+	if err != nil {
+		log.Fatal("Error loading .env file:", err)
+	}
+
+	environment := os.Getenv("ENVIRONMENT")
+
+	switch environment {
+	case "dev":
+		WS_URL = "ws://localhost:8080/ws"
+		err = http.ListenAndServe(":8080", nil)
+	case "prod":
+		WS_URL = "wss://pethenry.com/ws"
+		err = http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", nil)
+
+		go func() {
+			log.Fatal(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+			})))
+		}()
+	default:
+		fmt.Println("Environment variables not detected")
+		return
+	}
 
 	if err != nil {
 		fmt.Println("something messed up, shutting er down.")
+		fmt.Println(err)
 	}
+}
+
+// I am aware this needs reorganization. I will do it later
+
+type SyncData struct {
+	Code string `json:"code"`
+}
+
+func PostSyncCode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var data SyncData
+	if err := json.Unmarshal(body, &data); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := FindIDBySyncCode(data.Code)
+
+	if err != nil {
+		fmt.Println("Error recovering user:", err)
+		return
+	}
+
+	domain := ""
+
+	if strings.Contains(r.Host, "pethenry.com") {
+		domain = ".pethenry.com"
+	}
+
+	cookie := &http.Cookie{
+		Name:     "user_id_daisy",
+		Value:    userID,
+		HttpOnly: true,
+		Expires:  time.Now().AddDate(10, 0, 0),
+		Domain:   domain,
+	}
+
+	http.SetCookie(w, cookie)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})
 }
 
 func ServeHome(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +191,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 				Name:     "user_id_daisy",
 				Value:    user.userID,
 				HttpOnly: true,
-				Expires:  time.Now().AddDate(1, 0, 0),
+				Expires:  time.Now().AddDate(10, 0, 0),
 				Domain:   domain,
 			}
 			http.SetCookie(w, &cookie)
@@ -130,12 +214,16 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		User      string
+		SyncCode  string
 		UserPets  int
 		TotalPets int
+		WS_URL    string
 	}{
 		User:      user.displayName,
+		SyncCode:  user.syncCode,
 		UserPets:  user.petCount,
 		TotalPets: counter,
+		WS_URL:    WS_URL,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
@@ -240,6 +328,15 @@ func readMessages(client *Client) {
 			continue
 		}
 
+		// lazy workaround to prevent rewriting entire ws system for now
+		// The player can change the name sent through js to emulate these features
+		// It only affects front end, but I hate fun.
+		// I'm letting them send notification messages though, because I don't hate fun that much.
+
+		if clientMsg.Name == "playerCount" || clientMsg.Name == "leaderboard" || clientMsg.Name == "petCounter" {
+			continue
+		}
+
 		fmt.Println(clientMsg.Name, ":", clientMsg.Message)
 
 		if strings.Contains(clientMsg.Message, "$!pet;") {
@@ -256,9 +353,8 @@ func readMessages(client *Client) {
 
 			notifications <- newPetNotification()
 
+			// This is expensive..... we shouldn't queue the DB every click for every user.
 			newData := GetTopX(topPlayerCount)
-
-			// temporary
 
 			data, err := json.Marshal(newData)
 
@@ -294,7 +390,7 @@ func readMessages(client *Client) {
 
 func autoSave() {
 	for {
-		time.Sleep(5 * time.Minute)
+		time.Sleep(3 * time.Minute)
 		mu.RLock()
 		for client := range clients {
 			if err := client.user.SaveToDB(); err != nil {

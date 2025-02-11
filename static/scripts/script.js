@@ -1,5 +1,5 @@
 // TODO: export to .env
-const ws = new WebSocket("ws://localhost:80/ws")
+const ws = new WebSocket(wsURL)
 
 let daisyReferenceSize = {width: 894, height: 597};
 let referenceNoseCoordinates = {x: 349, y: 145};

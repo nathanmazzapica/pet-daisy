@@ -175,8 +175,8 @@ h3 {
     border-radius: var(--container-border-radius);
     margin: 8px auto;
     padding: 4px;
-    width: 30%;
     min-width: 200px;
+    width: fit-content;
 }
 
 

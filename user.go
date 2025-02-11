@@ -14,6 +14,7 @@ const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 type User struct {
 	userID      string `field:"user_id"`
 	displayName string `field:"display_name"`
+	syncCode    string `field:"sync_code"`
 	petCount    int    `field:"pets"`
 	exists      bool
 }
@@ -27,7 +28,7 @@ func CreateNewUser() *User {
 	userID := uuid.New().String()
 	displayName := getRandomDisplayName()
 
-	newUser := User{userID, displayName, 0, false}
+	newUser := User{userID, displayName, generateSyncCode(), 0, false}
 
 	err := newUser.SaveToDB()
 
@@ -43,18 +44,42 @@ func CreateNewUser() *User {
 func GetUserFromDB(userID string) (*User, error) {
 	user := &User{}
 
-	result := db.QueryRow("SELECT user_id, display_name, pets FROM users WHERE user_id=?", userID)
+	result := db.QueryRow("SELECT user_id, display_name, sync_code, pets FROM users WHERE user_id=?", userID)
 
-	if err := result.Scan(&user.userID, &user.displayName, &user.petCount); err != nil {
+	if err := result.Scan(&user.userID, &user.displayName, &user.syncCode, &user.petCount); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user with id %v not found!", userID)
 		}
 		return nil, err
 	}
 
+	// For migration purposes
+	if user.syncCode == "NEEDCODEPLS" {
+		fmt.Printf("user with id %v needs a sync code", userID)
+		_, err := db.Exec("UPDATE users SET sync_code = ? WHERE user_id = ?", generateSyncCode(), userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	user.exists = true
 
 	return user, nil
+}
+
+func FindIDBySyncCode(code string) (string, error) {
+	var userID string
+
+	result := db.QueryRow("SELECT user_id FROM users WHERE sync_code = ?", code)
+
+	if err := result.Scan(&userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("user with SyncCode %v not found!", code)
+		}
+		return "", err
+	}
+
+	return userID, nil
 }
 
 // im wondering if a key as param would work better here

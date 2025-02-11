@@ -68,3 +68,26 @@ if (isMobileDevice()) {
 
     checkResize();
 }
+
+async function syncUserCode(code) {
+    try {
+        const response = await fetch("/sync", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ code })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.refresh) {
+                window.location.reload();  // Refresh the page
+            }
+        } else {
+            console.error("Failed to sync code:", response.statusText);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
