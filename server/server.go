@@ -1,16 +1,9 @@
 package server
 
 import (
+	"log"
 	"net/http"
-
-	"github.com/gorilla/websocket"
 )
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 func InitRoutes() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -18,7 +11,20 @@ func InitRoutes() {
 	http.HandleFunc("/sync", PostSyncCode)
 
 	http.HandleFunc("/ws", HandleConnections)
-	http.HandleFunc("/roadmap", ServerRoadmap)
+	http.HandleFunc("/roadmap", ServeRoadmap)
+	http.HandleFunc("/error", ServeError)
 
-	http.HandleFunc("/ping", ping)
+	go handleChatMessages()
+	go handleNotifications()
+	go autoSave()
+}
+
+func RedirectHTTP() {
+	log.Fatal(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://pethenry.com", http.StatusMovedPermanently)
+	})))
+}
+
+func StartHTTPS() error {
+	return http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", nil)
 }

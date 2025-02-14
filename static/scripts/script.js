@@ -69,7 +69,7 @@ ws.onmessage = (event) => {
 }
 
 ws.onclose = () => {
-    alert("Something has gone horribly wrong... Please refresh the page.")
+    window.location.href = "/error"
 }
 
 function petDaisy() {

@@ -1,256 +1,68 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
-	"html/template"
-	"io/ioutil"
+	"github.com/nathanmazzapica/pet-daisy/db"
+	"github.com/nathanmazzapica/pet-daisy/game"
+	"github.com/nathanmazzapica/pet-daisy/server"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 )
 
-var db *sql.DB
 var WS_URL string
-var topPlayers []LeaderboardRowData
-
-var (
-	clients        = make(map[*Client]bool)
-	mu             sync.RWMutex
-	counter        int64
-	messages       = make(chan ClientMessage)
-	notifications  = make(chan ClientMessage)
-	topPlayerCount = 10
-)
+var topPlayers []game.LeaderboardRowData
 
 type Client struct {
 	conn        *websocket.Conn
 	id          string
-	user        User
+	user        db.User
 	lastPetTime time.Time
 	susPets     int
 }
 
-type ClientMessage struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
-}
-
 func main() {
 
-	// load DB
-
-	var err error
-	db, err = sql.Open("sqlite3", "./data.db")
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	defer db.Close()
-
-	result := db.QueryRow("SELECT SUM(pets) FROM users")
-	result.Scan(&counter)
-
-	topPlayers = GetTopX(topPlayerCount)
-
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.HandleFunc("/", ServeHome)
-	http.HandleFunc("/sync", PostSyncCode)
-
-	http.HandleFunc("/ws", HandleConnections)
-	http.HandleFunc("/roadmap", ServerRoadmap)
-
-	http.HandleFunc("/ping", ping)
-
-	go handleChatMessages()
-	go handleNotifications()
-	go autoSave()
-
-	fmt.Println("Hello, Daisy!")
-
-	err = godotenv.Load()
-
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
 
-	environment := os.Getenv("ENVIRONMENT")
+	db.Connect()
+	game.InitCounter()
 
+	server.InitRoutes()
+
+	environment := os.Getenv("ENVIRONMENT")
 	switch environment {
 	case "dev":
-		WS_URL = "ws://localhost:8080/ws"
-		err = http.ListenAndServe(":8080", nil)
+		server.WsUrl = "ws://localhost:8080/ws"
+		log.Fatal(http.ListenAndServe(":8080", nil))
 	case "prod":
-		WS_URL = "wss://pethenry.com/ws"
-
-		go func() {
-			log.Fatal(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "https://pethenry.com", http.StatusMovedPermanently)
-			})))
-		}()
-
-		err = http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", nil)
+		server.WsUrl = "wss://pethenry.com/ws"
+		go server.RedirectHTTP()
+		log.Fatal(server.StartHTTPS())
 	default:
-		fmt.Println("Environment variables not detected")
+		fmt.Println("Invalid environment configuration")
 		return
-	}
-
-	if err != nil {
-		fmt.Println("something messed up, shutting er down.")
-		fmt.Println(err)
 	}
 }
 
-// I am aware this needs reorganization. I will do it later
-
-type SyncData struct {
-	Code string `json:"code"`
-}
-
-func PostSyncCode(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var data SyncData
-	if err := json.Unmarshal(body, &data); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
-		return
-	}
-
-	userID, err := FindIDBySyncCode(data.Code)
-
-	if err != nil {
-		fmt.Println("Error recovering user:", err)
-		return
-	}
-
-	domain := ""
-
-	if strings.Contains(r.Host, "pethenry.com") {
-		domain = ".pethenry.com"
-	}
-
-	cookie := &http.Cookie{
-		Name:     "user_id_daisy",
-		Value:    userID,
-		HttpOnly: true,
-		Expires:  time.Now().AddDate(10, 0, 0),
-		Domain:   domain,
-	}
-
-	http.SetCookie(w, cookie)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})
-}
-
-func ServeHome(w http.ResponseWriter, r *http.Request) {
-
-	user_id, err := r.Cookie("user_id_daisy")
-	var userID string
-	var user *User
-
-	if err != nil {
-		switch {
-		case errors.Is(err, http.ErrNoCookie):
-
-			user = CreateNewUser()
-			fmt.Println("hello,", user.displayName)
-			fmt.Println("newID:", user.userID)
-
-			domain := ""
-
-			if strings.Contains(r.Host, "pethenry.com") {
-				domain = ".pethenry.com"
-			}
-
-			cookie := http.Cookie{
-				Name:     "user_id_daisy",
-				Value:    user.userID,
-				HttpOnly: true,
-				Expires:  time.Now().AddDate(10, 0, 0),
-				Domain:   domain,
-			}
-			http.SetCookie(w, &cookie)
-		default:
-			fmt.Println(err)
-			http.Error(w, "server error", http.StatusInternalServerError)
-			// todo: make funny error html page
-			return
-		}
-	} else {
-		userID = user_id.Value
-		user, err = GetUserFromDB(userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-	}
-
-	fmt.Printf("USER: {%s} CONNECTED\n", user.displayName)
-
-	data := struct {
-		User      string
-		SyncCode  string
-		UserPets  int
-		TotalPets int64
-		WS_URL    string
-	}{
-		User:      user.displayName,
-		SyncCode:  user.syncCode,
-		UserPets:  user.petCount,
-		TotalPets: counter,
-		WS_URL:    WS_URL,
-	}
-
-	tmpl := template.Must(template.ParseFiles("templates/index.html"))
-
-	err = tmpl.Execute(w, data)
-
-	if err != nil {
-		fmt.Println("error sending html", err)
-	}
-}
-
-func ServerRoadmap(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/roadmap.html"))
-	err := tmpl.Execute(w, nil)
-
-	if err != nil {
-		fmt.Println("error sending html", err)
-	}
-}
-
+/*
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("hello!")
 	fmt.Println("Cookie header:", r.Header.Get("Cookie"))
 
-	userID, err := GetUserID(r)
+	userID, err := db.GetUserID(r)
 	if err != nil {
 		fmt.Println("Could not retrieve user ID:", err)
 	}
 
-	user, err := GetUserFromDB(userID)
+	user, err := db.GetUserFromDB(userID)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -291,7 +103,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	notifications <- playerJoinNotification(client.user.displayName)
 	notifications <- playerCountUpdate
 
-	data, err := json.Marshal(GetTopX(topPlayerCount))
+	data, err := json.Marshal(game.GetTopX(topPlayerCount))
 
 	notifications <- ClientMessage{"leaderboard", string(data)}
 
@@ -373,7 +185,7 @@ func readMessages(client *Client) {
 			notifications <- newPetNotification()
 
 			// This is expensive..... we shouldn't queue the DB every click for every user.
-			newData := GetTopX(topPlayerCount)
+			newData := game.GetTopX(topPlayerCount)
 
 			data, err := json.Marshal(newData)
 
@@ -407,88 +219,7 @@ func readMessages(client *Client) {
 	}
 }
 
-func autoSave() {
-	for {
-		time.Sleep(3 * time.Minute)
-		mu.RLock()
-		for client := range clients {
-			if err := client.user.SaveToDB(); err != nil {
-				fmt.Printf("Error saving user %s to db: %v\nWill retry next autosave", client.user.displayName, err)
-				continue
-			}
-			fmt.Printf("Saved user %s to db\n", client.user.displayName)
-		}
-		mu.RUnlock()
-		fmt.Println("Autosave complete.")
-	}
-}
-
-// BROADCAST HANDLERS //
-func handleNotifications() {
-	for {
-		newNotification := <-notifications
-
-		for client := range clients {
-			sendJSONToClient(client, newNotification)
-		}
-	}
-}
-
-func handleChatMessages() {
-	for {
-		newChatMessage := <-messages
-
-		for client := range clients {
-			sendJSONToClient(client, newChatMessage)
-		}
-	}
-}
-
 // HELPERS //
-
-func sendJSONToClient(client *Client, notification ClientMessage) {
-	jsonData, err := json.Marshal(notification)
-
-	if err != nil {
-		fmt.Println("error encoding json:", err)
-		return
-	}
-
-	err = client.conn.WriteMessage(websocket.TextMessage, jsonData)
-
-	if err != nil {
-		fmt.Println("error networking message", err)
-		client.conn.Close()
-		mu.Lock()
-		delete(clients, client)
-		mu.Unlock()
-	}
-}
-
-func newPetNotification() ClientMessage {
-	// CHECK BACK LATER
-	return ClientMessage{"petCounter", strconv.Itoa(int(counter))}
-}
-
-func serverNotification(content string) ClientMessage {
-	return ClientMessage{"server", content}
-}
-
-func newMilestoneNotification() ClientMessage {
-	return ClientMessage{"Daisy", fmt.Sprintf("Yay! I have been pet %v times!", counter)}
-}
-
-func newAchievmentNotification(user string, count int) ClientMessage {
-	return ClientMessage{"server", fmt.Sprintf("%v has pet daisy %v times!", user, count)}
-}
-
-func playerJoinNotification(user string) ClientMessage {
-	return ClientMessage{"server", fmt.Sprintf("%v has joined! say hi!", user)}
-}
-
-func playerLeftNotification(user string) ClientMessage {
-	return ClientMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
-}
 
 // leaderboardNeedsUpdate is a helper function that determines whether we should send the result of GetTopX to the client
 // This needs to be fleshed out a little bit
@@ -498,7 +229,7 @@ func playerLeftNotification(user string) ClientMessage {
 //
 // I want to avoid querying the DB for every pet, it sounds expensive.
 // I am going to learn more about SQL before I proceed
-func leaderboardNeedsUpdate(newData []LeaderboardRowData) bool {
+func leaderboardNeedsUpdate(newData []game.LeaderboardRowData) bool {
 	for i := 0; i < len(newData); i++ {
 		fmt.Println("checking")
 		fmt.Println("new: ", newData[i], "old: ", topPlayers[i])
@@ -515,7 +246,7 @@ func leaderboardNeedsUpdate(newData []LeaderboardRowData) bool {
 func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("pong")
 
-	top := GetTopX(topPlayerCount)
+	top := game.GetTopX(topPlayerCount)
 
 	data, err := json.Marshal(top)
 
@@ -526,3 +257,5 @@ func ping(w http.ResponseWriter, r *http.Request) {
 
 	w.Write(data)
 }
+
+*/

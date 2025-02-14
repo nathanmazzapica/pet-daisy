@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -12,15 +12,15 @@ import (
 const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 type User struct {
-	userID      string `field:"user_id"`
-	displayName string `field:"display_name"`
-	syncCode    string `field:"sync_code"`
-	petCount    int    `field:"pets"`
+	UserID      string `field:"user_id"`
+	DisplayName string `field:"display_name"`
+	SyncCode    string `field:"sync_code"`
+	PetCount    int    `field:"pets"`
 	exists      bool
 }
 
 func (u *User) ID() string {
-	return u.userID
+	return u.UserID
 }
 
 // CreateNewUser creates a new user and attempts to save them to the database. If this fails the user is still created, and future database saves will try again
@@ -44,9 +44,9 @@ func CreateNewUser() *User {
 func GetUserFromDB(userID string) (*User, error) {
 	user := &User{}
 
-	result := db.QueryRow("SELECT user_id, display_name, sync_code, pets FROM users WHERE user_id=?", userID)
+	result := DB.QueryRow("SELECT user_id, display_name, sync_code, pets FROM users WHERE user_id=?", userID)
 
-	if err := result.Scan(&user.userID, &user.displayName, &user.syncCode, &user.petCount); err != nil {
+	if err := result.Scan(&user.UserID, &user.DisplayName, &user.SyncCode, &user.PetCount); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user with id %v not found!", userID)
 		}
@@ -54,9 +54,9 @@ func GetUserFromDB(userID string) (*User, error) {
 	}
 
 	// For migration purposes
-	if user.syncCode == "NEEDCODEPLS" {
+	if user.SyncCode == "NEEDCODEPLS" {
 		fmt.Printf("user with id %v needs a sync code", userID)
-		_, err := db.Exec("UPDATE users SET sync_code = ? WHERE user_id = ?", generateSyncCode(), userID)
+		_, err := DB.Exec("UPDATE users SET sync_code = ? WHERE user_id = ?", generateSyncCode(), userID)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +70,7 @@ func GetUserFromDB(userID string) (*User, error) {
 func FindIDBySyncCode(code string) (string, error) {
 	var userID string
 
-	result := db.QueryRow("SELECT user_id FROM users WHERE sync_code = ?", code)
+	result := DB.QueryRow("SELECT user_id FROM users WHERE sync_code = ?", code)
 
 	if err := result.Scan(&userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -87,21 +87,21 @@ func FindIDBySyncCode(code string) (string, error) {
 // SaveToDB saves a user's pets to DB if they exist, otherwise inserts user into DB
 func (u *User) SaveToDB() error {
 
-	if db == nil {
+	if DB == nil {
 		fmt.Println("db connection is nil")
 		return errors.New("db connection is nil")
 	}
 
 	if u.exists {
 		fmt.Println("user already exists, saving pets")
-		_, err := db.Exec("UPDATE users SET pets = ? WHERE user_id = ? ", u.petCount, u.userID)
+		_, err := DB.Exec("UPDATE users SET pets = ? WHERE user_id = ? ", u.PetCount, u.UserID)
 
 		return err
 	}
 
 	fmt.Println("Inserting new user into DB")
 
-	_, err := db.Exec("INSERT INTO users (user_id, pets, display_name) VALUES (?, ?, ?)", u.userID, u.petCount, u.displayName)
+	_, err := DB.Exec("INSERT INTO users (user_id, pets, display_name) VALUES (?, ?, ?)", u.UserID, u.PetCount, u.DisplayName)
 	u.exists = true
 
 	return err

@@ -1,0 +1,25 @@
+:root {
+    /* colors */
+    --henry-gradient-start: #ffd260;
+    --henry-gradient-end: #ff9b3a;
+    --henry-shadow: #ff9060;
+
+    --daisy-gradient-start: #520606;
+    --daisy-gradient-end: #1a0101;
+    --daisy-shadow: #460606;
+
+    --soft-purple-bg: #E6E6FA;
+    --dark-purple-bg: #bfbfee;
+
+    --notification-positive: #d0f0c0;
+    --notification-negative: #ffb4b4;
+
+    /* border */
+    --daisy-border: 3px solid var(--dark-purple-bg);
+    --container-border-radius: 8px;
+}
+
+#daisy-image {
+    filter: drop-shadow(0px 5px 5px var(--daisy-shadow)) brightness(75%) contrast(175%);
+    margin: 20px;
+}
