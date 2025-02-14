@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -23,16 +24,10 @@ var db *sql.DB
 var WS_URL string
 var topPlayers []LeaderboardRowData
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 var (
 	clients        = make(map[*Client]bool)
 	mu             sync.RWMutex
-	counter        int
+	counter        int64
 	messages       = make(chan ClientMessage)
 	notifications  = make(chan ClientMessage)
 	topPlayerCount = 10
@@ -43,6 +38,7 @@ type Client struct {
 	id          string
 	user        User
 	lastPetTime time.Time
+	susPets     int
 }
 
 type ClientMessage struct {
@@ -72,9 +68,9 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", ServeHome)
 	http.HandleFunc("/sync", PostSyncCode)
-	//http.HandleFunc("/profile", serveProfile)
 
 	http.HandleFunc("/ws", HandleConnections)
+	http.HandleFunc("/roadmap", ServerRoadmap)
 
 	http.HandleFunc("/ping", ping)
 
@@ -98,13 +94,14 @@ func main() {
 		err = http.ListenAndServe(":8080", nil)
 	case "prod":
 		WS_URL = "wss://pethenry.com/ws"
-		err = http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", nil)
 
 		go func() {
 			log.Fatal(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+				http.Redirect(w, r, "https://pethenry.com", http.StatusMovedPermanently)
 			})))
 		}()
+
+		err = http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", nil)
 	default:
 		fmt.Println("Environment variables not detected")
 		return
@@ -216,7 +213,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		User      string
 		SyncCode  string
 		UserPets  int
-		TotalPets int
+		TotalPets int64
 		WS_URL    string
 	}{
 		User:      user.displayName,
@@ -229,6 +226,15 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 
 	err = tmpl.Execute(w, data)
+
+	if err != nil {
+		fmt.Println("error sending html", err)
+	}
+}
+
+func ServerRoadmap(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("templates/roadmap.html"))
+	err := tmpl.Execute(w, nil)
 
 	if err != nil {
 		fmt.Println("error sending html", err)
@@ -285,7 +291,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	notifications <- playerJoinNotification(client.user.displayName)
 	notifications <- playerCountUpdate
 
-	data, err := json.Marshal(topPlayers)
+	data, err := json.Marshal(GetTopX(topPlayerCount))
 
 	notifications <- ClientMessage{"leaderboard", string(data)}
 
@@ -339,15 +345,28 @@ func readMessages(client *Client) {
 
 		fmt.Println(clientMsg.Name, ":", clientMsg.Message)
 
+		// PET HANDLING; EXPORT TO OWN FUNCTION ONE DAY //
 		if strings.Contains(clientMsg.Message, "$!pet;") {
 
-			mu.Lock()
-			counter++
-			mu.Unlock()
-			fmt.Println(clientMsg.Name, "pet daisy! She has now been pet: ", counter, "times.")
+			timeSinceLastPet := time.Now().Sub(client.lastPetTime)
+
+			// TODO: Add check for "uniformity" if user clicks exactly once every 100ms, it's probably cheating
+			if timeSinceLastPet < (15 * time.Millisecond) {
+				client.susPets++
+				if client.susPets > 15 {
+					fmt.Println("RAAAAAAAAAGH STOP CHEATING")
+					fmt.Println(timeSinceLastPet)
+					notifications <- serverNotification(fmt.Sprintf("%v is cheating :/", client.user.displayName))
+					return
+				}
+				continue
+			} else {
+				client.susPets = 0
+			}
+
+			atomic.AddInt64(&counter, 1)
 			client.user.petCount++
-			fmt.Println("client.user.petCount:", client.user.petCount)
-			fmt.Println(client.user.displayName)
+			client.lastPetTime = time.Now()
 
 			client.user.SaveToDB()
 
@@ -366,10 +385,10 @@ func readMessages(client *Client) {
 
 			// temporary
 
-			if shouldSend := leaderboardNeedsUpdate(newData); shouldSend {
-				fmt.Println("Leaderboard needs updating, now!")
-				// send the updated data
-			}
+			//if shouldSend := leaderboardNeedsUpdate(newData); shouldSend {
+			//	fmt.Println("Leaderboard needs updating, now!")
+			//	// send the updated data
+			//}
 
 			personal := client.user.petCount
 
@@ -447,7 +466,12 @@ func sendJSONToClient(client *Client, notification ClientMessage) {
 }
 
 func newPetNotification() ClientMessage {
-	return ClientMessage{"petCounter", strconv.Itoa(counter)}
+	// CHECK BACK LATER
+	return ClientMessage{"petCounter", strconv.Itoa(int(counter))}
+}
+
+func serverNotification(content string) ClientMessage {
+	return ClientMessage{"server", content}
 }
 
 func newMilestoneNotification() ClientMessage {

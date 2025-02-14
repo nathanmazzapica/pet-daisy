@@ -1,0 +1,21 @@
+body {
+    background-color: var(--soft-purple-bg);
+    padding: 0;
+}
+
+h2 {
+    background-color: var(--dark-purple-bg);
+    margin: 0;
+}
+
+.done {
+    opacity: 50%;
+    text-decoration: line-through;
+}
+
+.priority::after {
+    content: ' *' !important;
+    color: black !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+}
