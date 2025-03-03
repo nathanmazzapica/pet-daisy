@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/nathanmazzapica/pet-daisy/db"
@@ -11,19 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
-
-var WS_URL string
-var topPlayers []game.LeaderboardRowData
-
-type Client struct {
-	conn        *websocket.Conn
-	id          string
-	user        db.User
-	lastPetTime time.Time
-	susPets     int
-}
 
 func main() {
 

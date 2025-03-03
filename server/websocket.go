@@ -1,9 +1,11 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,11 +22,12 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	clients        = make(map[*Client]bool)
-	mu             sync.RWMutex
-	messages       = make(chan ClientMessage)
-	notifications  = make(chan ClientMessage)
-	topPlayerCount = 10
+	clients          = make(map[*Client]bool)
+	webhookCooldowns = make(map[string]time.Time)
+	mu               sync.RWMutex
+	messages         = make(chan ClientMessage)
+	notifications    = make(chan ClientMessage)
+	topPlayerCount   = 10
 )
 
 // Client represents a WebSocket connection
@@ -84,6 +87,11 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	notifications <- playerJoinNotification(client.user.DisplayName)
 	notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
 
+	if lastConnectTime, ok := webhookCooldowns[client.user.UserID]; !ok || lastConnectTime.Before(time.Now().Add(-2*time.Minute)) {
+		sendDiscordWebhook("🌼 " + client.user.DisplayName + " has connected to Daisy! 🌼")
+		webhookCooldowns[client.user.UserID] = time.Now()
+	}
+
 	data, err := json.Marshal(game.GetTopX(topPlayerCount))
 	notifications <- ClientMessage{"leaderboard", string(data)}
 
@@ -112,6 +120,20 @@ func readMessages(client *Client) {
 			handlePet(client)
 		} else {
 			messages <- clientMsg
+
+			if strings.Contains(strings.ToLower(clientMsg.Message), "daisy") {
+
+				switch strings.ToLower(clientMsg.Message) {
+				case "hi daisy":
+					messages <- ClientMessage{"Daisy", fmt.Sprintf("hi %v", client.user.DisplayName)}
+				case "i love you daisy":
+					messages <- ClientMessage{"Daisy", fmt.Sprintf("i love you %v", client.user.DisplayName)}
+				case "daisy why are you so cute":
+					messages <- ClientMessage{"Daisy", fmt.Sprintf("stop flirting with me %v... arf", client.user.DisplayName)}
+				default:
+					messages <- daisyMessage()
+				}
+			}
 		}
 	}
 }
@@ -119,11 +141,16 @@ func readMessages(client *Client) {
 // handlePet increments the pet count safely
 func handlePet(client *Client) {
 	timeSinceLastPet := time.Since(client.lastPetTime)
-
-	if timeSinceLastPet < (15 * time.Millisecond) {
+	fmt.Println("Pet time:", client.lastPetTime.Local().Format(time.RFC822))
+	fmt.Println("susPets", client.susPets)
+	if timeSinceLastPet <= (45 * time.Millisecond) {
+		fmt.Println("grrr")
 		client.susPets++
-		if client.susPets > 15 {
-			notifications <- serverNotification(fmt.Sprintf("%s is cheating!!", client.user.DisplayName))
+		if client.susPets > 8 {
+			cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
+			notifications <- serverNotification(cheaterCallout)
+			sendDiscordWebhook(cheaterCallout)
+			client.conn.Close()
 			return
 		}
 		return
@@ -148,6 +175,7 @@ func handlePet(client *Client) {
 
 	if personal == 10 || personal == 50 || personal == 100 || personal == 500 || personal%1000 == 0 {
 		notifications <- newAchievmentNotification(client.user.DisplayName, personal)
+		sendDiscordWebhook("🎉 " + client.user.DisplayName + " has pet daisy " + strconv.Itoa(personal) + " times! 🎉")
 	}
 
 	if game.Counter%1000 == 0 {
@@ -169,7 +197,6 @@ func handleNotifications() {
 func handleChatMessages() {
 	for {
 		newChatMessage := <-messages
-
 		for client := range clients {
 			sendJSONToClient(client, newChatMessage)
 		}
@@ -179,6 +206,7 @@ func handleChatMessages() {
 func autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
+		messages <- daisyMessage()
 		mu.RLock()
 		for client := range clients {
 			if err := client.user.SaveToDB(); err != nil {
@@ -189,6 +217,32 @@ func autoSave() {
 		}
 		mu.RUnlock()
 		fmt.Println("Autosave complete.")
+	}
+}
+
+func sendDiscordWebhook(message string) {
+	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
+
+	jsonData := []byte(`{"content": "` + message + `"}`)
+
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending webhook:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		fmt.Println("Discord webhook returned:", resp.Status)
 	}
 }
 
