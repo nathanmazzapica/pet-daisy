@@ -24,6 +24,7 @@ function displayServerChatNotification(content) {
     return notification;
 }
 
+/*
 function buildMessage(name, content) {
     const message = document.createElement("p");
     message.classList.add("message");
@@ -38,6 +39,45 @@ function buildMessage(name, content) {
 
     message.textContent = content;
     message.prepend(sender);
+
+    return message;
+}*/
+
+function buildMessage(name, content) {
+    const message = document.createElement("p");
+    message.classList.add("message");
+
+    const sender = document.createElement("span");
+    sender.innerText = `${name}: `;
+    sender.classList.add("name");
+
+    if (name !== displayName) {
+        sender.classList.add("other");
+    }
+
+    const messageContent = document.createElement("span");
+
+    const escapedContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    const fragment = document.createDocumentFragment();
+    const words = escapedContent.split(/\s+/);
+
+    words.forEach(word => {
+        if (/^https?:\/\/[^\s]+$/.test(word)) {
+            const link = document.createElement("a");
+            link.href = word.toLocaleLowerCase();
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = word.toLocaleLowerCase();
+            fragment.appendChild(link);
+        } else {
+            fragment.appendChild(document.createTextNode(word + " "));
+        }
+    });
+
+    messageContent.appendChild(fragment);
+    message.appendChild(sender);
+    message.appendChild(messageContent);
 
     return message;
 }

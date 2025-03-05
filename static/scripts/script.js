@@ -47,9 +47,10 @@ ws.onmessage = (event) => {
     if (data.name === "server") {
         console.log("handle server notification")
         console.log(data.message)
+        if (data.message.indexOf("hi!") !== -1 || data.message.indexOf(":(") !== -1) {
+            chatMessageContainer.appendChild(displayServerChatNotification(data.message));
+        }
         displayToast("Notification", data.message, 2000);
-        chatMessageContainer.appendChild(displayServerChatNotification(data.message));
-        chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
         return;
     }
 
@@ -57,8 +58,20 @@ ws.onmessage = (event) => {
         console.log("handle leaderboard notification")
         console.log(JSON.parse(data.message));
         displayLeaderboard(JSON.parse(data.message));
-        chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
         return;
+    }
+
+    if (data.name === "milEvent") {
+        activateMilestoneEvent()
+        buildMessage("Daisy", "Thank you guys so much for petting me 1,000,000 times! I invited all my friends to celebrate!")
+        return;
+    }
+
+
+    if (data.name === "updateDisplay") {
+        buildMessage("Daisy", `${displayName} has changed their name to ${data.message}!`)
+        displayName = data.message;
+        return
     }
 
     console.log(`${data.name}: ${data.message}`);

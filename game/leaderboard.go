@@ -69,7 +69,6 @@ func updateLeaderboard(user *db.User) {
 
 func GetTopX(count int) []LeaderboardRowData {
 	var topUsers []LeaderboardRowData
-	fmt.Printf("Getting top %v users\n", count)
 
 	rows, err := db.DB.Query("SELECT user_id, display_name, pets FROM users ORDER BY pets DESC LIMIT ?", count)
 

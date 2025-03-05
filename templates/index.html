@@ -78,5 +78,13 @@
     <script src="../static/scripts/leaderboard.js"></script>
     <script src="../static/scripts/toast.js"></script>
     <script src="../static/scripts/script.js"></script>
+{{/*    <script src="../static/scripts/{{ .Event }}"></script>*/}}
+    <script src="../static/scripts/milEvent.js"></script>
+    <script>
+        let totalE = {{ .TotalPets }}
+        if (totalE >= 1_000_000) {
+            activateMilestoneEvent()
+        }
+    </script>
 </body>
 </html>

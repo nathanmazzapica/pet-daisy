@@ -19,5 +19,5 @@ func PetDaisy(user *db.User) {
 	user.PetCount++
 	user.SaveToDB()
 
-	fmt.Printf("%s pet Daisy! Total pets: %d\n", user.DisplayName, Counter)
+	//fmt.Printf("%s pet Daisy! Total pets: %d\n", user.DisplayName, Counter)
 }

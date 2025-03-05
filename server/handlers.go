@@ -13,6 +13,7 @@ import (
 )
 
 var WsUrl string
+var activeEvent string
 
 func ServeHome(w http.ResponseWriter, r *http.Request) {
 
@@ -65,12 +66,14 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		UserPets  int
 		TotalPets int64
 		WS_URL    string
+		Event     string
 	}{
 		User:      user.DisplayName,
 		SyncCode:  user.SyncCode,
 		UserPets:  user.PetCount,
 		TotalPets: game.Counter,
 		WS_URL:    WsUrl,
+		Event:     activeEvent,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
@@ -126,6 +129,15 @@ func PostSyncCode(w http.ResponseWriter, r *http.Request) {
 
 func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/roadmap.html"))
+	err := tmpl.Execute(w, nil)
+
+	if err != nil {
+		fmt.Println("error sending html", err)
+	}
+}
+
+func ServeBreak(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("templates/break.html"))
 	err := tmpl.Execute(w, nil)
 
 	if err != nil {

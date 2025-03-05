@@ -93,7 +93,6 @@ func (u *User) SaveToDB() error {
 	}
 
 	if u.exists {
-		fmt.Println("user already exists, saving pets")
 		_, err := DB.Exec("UPDATE users SET pets = ? WHERE user_id = ? ", u.PetCount, u.UserID)
 
 		return err
@@ -105,6 +104,14 @@ func (u *User) SaveToDB() error {
 	u.exists = true
 
 	return err
+}
+
+func (u *User) UpdateDisplayName(name string) {
+	_, err := DB.Exec("UPDATE users SET display_name = ? WHERE user_id = ?", name, u.UserID)
+
+	if err != nil {
+		fmt.Println("error updating display name", err)
+	}
 }
 
 // GetUserID retrieves the User ID from the client request's cookie

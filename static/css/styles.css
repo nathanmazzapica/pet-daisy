@@ -52,6 +52,7 @@ h3 {
     justify-content: center;
     width: 30%;
     min-width: 500px;
+    z-index: 3;
 }
 
 #daisy-image {
@@ -236,6 +237,16 @@ tr {
 .toast p {
     margin-top: 2px;
 }
+
+.particle {
+    position: absolute;
+    background-color: white;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2; /* Ensure particles appear above */
+}
+
+
 
 @media screen and (max-width: 768px) {
 

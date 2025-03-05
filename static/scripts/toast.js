@@ -1,3 +1,4 @@
+// Expiry in ms
 function displayToast(title, msg, expiry) {
     const toast = document.createElement('div');
     toast.classList.add('toast','hide');

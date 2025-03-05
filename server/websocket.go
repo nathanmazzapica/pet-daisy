@@ -22,12 +22,13 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	clients          = make(map[*Client]bool)
-	webhookCooldowns = make(map[string]time.Time)
-	mu               sync.RWMutex
-	messages         = make(chan ClientMessage)
-	notifications    = make(chan ClientMessage)
-	topPlayerCount   = 10
+	clients               = make(map[*Client]bool)
+	webhookCooldowns      = make(map[string]time.Time)
+	mu                    sync.RWMutex
+	messages              = make(chan ClientMessage)
+	notifications         = make(chan ClientMessage)
+	topPlayerCount        = 10
+	lastLeaderboardUpdate = int64(0)
 )
 
 // Client represents a WebSocket connection
@@ -36,7 +37,8 @@ type Client struct {
 	id          string
 	user        db.User
 	lastPetTime time.Time
-	susPets     int
+	petTimes    [50]time.Time
+	sessionPets int
 }
 
 type ClientMessage struct {
@@ -119,6 +121,7 @@ func readMessages(client *Client) {
 		if strings.Contains(clientMsg.Message, "$!pet;") {
 			handlePet(client)
 		} else {
+			clientMsg.Name = client.user.DisplayName
 			messages <- clientMsg
 
 			if strings.Contains(strings.ToLower(clientMsg.Message), "daisy") {
@@ -140,36 +143,57 @@ func readMessages(client *Client) {
 
 // handlePet increments the pet count safely
 func handlePet(client *Client) {
-	timeSinceLastPet := time.Since(client.lastPetTime)
-	fmt.Println("Pet time:", client.lastPetTime.Local().Format(time.RFC822))
-	fmt.Println("susPets", client.susPets)
-	if timeSinceLastPet <= (45 * time.Millisecond) {
-		fmt.Println("grrr")
-		client.susPets++
-		if client.susPets > 8 {
+	petTimeIdx := client.sessionPets % 50
+
+	client.petTimes[petTimeIdx] = time.Now()
+	if client.sessionPets > 0 && client.sessionPets%10 == 0 {
+		fmt.Println("calculate st dev")
+		intervals := make([]int64, 0)
+
+		// I start at 2 because for some reason the first interval is always a large negative. I'll figure it out later
+		for i := 2; i < 50; i++ {
+			if client.petTimes[i].IsZero() || client.petTimes[i-1].IsZero() {
+				continue
+			}
+			intervals = append(intervals, client.petTimes[i].Sub(client.petTimes[i-1]).Milliseconds())
+		}
+
+		fmt.Println("Intervals:", intervals)
+		mean := meanTime(intervals)
+		deviation := stdDev(intervals, mean)
+		fmt.Println("Std Dev:", deviation)
+
+		if deviation < 0.5 {
 			cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
 			notifications <- serverNotification(cheaterCallout)
 			sendDiscordWebhook(cheaterCallout)
+
+			client.user.PetCount -= 50
+			game.Counter -= 50
+
 			client.conn.Close()
 			return
 		}
-		return
-	} else {
-		client.susPets = 0
+
 	}
+
+	client.sessionPets++
 
 	game.PetDaisy(&client.user)
 	client.lastPetTime = time.Now()
 	client.user.SaveToDB()
 
 	notifications <- newPetNotification()
-	newData := game.GetTopX(topPlayerCount)
 
-	data, err := json.Marshal(newData)
-	if err != nil {
-		fmt.Println("error encoding json:", err)
+	if shouldUpdateLeaderboard() {
+		newData := game.GetTopX(topPlayerCount)
+
+		data, err := json.Marshal(newData)
+		if err != nil {
+			fmt.Println("error encoding json:", err)
+		}
+		notifications <- ClientMessage{"leaderboard", string(data)}
 	}
-	notifications <- ClientMessage{"leaderboard", string(data)}
 
 	personal := client.user.PetCount
 
@@ -180,6 +204,20 @@ func handlePet(client *Client) {
 
 	if game.Counter%1000 == 0 {
 		notifications <- newMilestoneNotification()
+	}
+
+	if game.Counter == 1_000_000 {
+		activeEvent = "milEvent.js"
+		notifications <- ClientMessage{Name: "milEvent", Message: activeEvent}
+		trophy := fmt.Sprintf("🌼 %s 🌼", client.user.DisplayName)
+		sendDiscordWebhook(fmt.Sprintf("🏆 %s was Daisy's 1,000,000th pet! 🏆", client.user.DisplayName))
+
+		client.user.UpdateDisplayName(trophy)
+		client.user.DisplayName = trophy
+
+		nameUpdate := ClientMessage{Name: "updateDisplay", Message: trophy}
+		sendJSONToClient(client, nameUpdate)
+
 	}
 }
 
@@ -244,6 +282,15 @@ func sendDiscordWebhook(message string) {
 	if resp.StatusCode != http.StatusNoContent {
 		fmt.Println("Discord webhook returned:", resp.Status)
 	}
+}
+
+func shouldUpdateLeaderboard() bool {
+	now := time.Now().UnixMilli()
+	if now > lastLeaderboardUpdate+250 {
+		lastLeaderboardUpdate = now
+		return true
+	}
+	return false
 }
 
 func sendJSONToClient(client *Client, notification ClientMessage) {
