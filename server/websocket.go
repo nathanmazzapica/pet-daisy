@@ -15,6 +15,7 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 
 	"github.com/gorilla/websocket"
+	_ "net/http/pprof"
 )
 
 var upgrader = websocket.Upgrader{
@@ -147,7 +148,7 @@ func handlePet(client *Client) {
 
 	client.petTimes[petTimeIdx] = time.Now()
 	if client.sessionPets > 0 && client.sessionPets%10 == 0 {
-		fmt.Println("calculate st dev")
+		//fmt.Println("calculate st dev")
 		intervals := make([]int64, 0)
 
 		// I start at 2 because for some reason the first interval is always a large negative. I'll figure it out later
@@ -158,10 +159,10 @@ func handlePet(client *Client) {
 			intervals = append(intervals, client.petTimes[i].Sub(client.petTimes[i-1]).Milliseconds())
 		}
 
-		fmt.Println("Intervals:", intervals)
+		//fmt.Println("Intervals:", intervals)
 		mean := meanTime(intervals)
 		deviation := stdDev(intervals, mean)
-		fmt.Println("Std Dev:", deviation)
+		//fmt.Println("Std Dev:", deviation)
 
 		if deviation < 0.5 {
 			cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
@@ -204,6 +205,10 @@ func handlePet(client *Client) {
 
 	if game.Counter%1000 == 0 {
 		notifications <- newMilestoneNotification()
+	}
+
+	if game.Counter%10000 == 0 {
+		sendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(game.Counter) + " times! 🎉")
 	}
 
 	if game.Counter == 1_000_000 {
