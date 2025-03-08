@@ -23,11 +23,12 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	clients               = make(map[*Client]bool)
-	webhookCooldowns      = make(map[string]time.Time)
-	mu                    sync.RWMutex
-	messages              = make(chan ClientMessage)
-	notifications         = make(chan ClientMessage)
+	clients          = make(map[*Client]bool)
+	webhookCooldowns = make(map[string]time.Time)
+	mu               sync.RWMutex
+	messages         = make(chan ClientMessage)
+	notifications    = make(chan ClientMessage)
+	//dbQueue               = make(chan PetEvent, 10000)
 	topPlayerCount        = 10
 	lastLeaderboardUpdate = int64(0)
 )
@@ -40,11 +41,17 @@ type Client struct {
 	lastPetTime time.Time
 	petTimes    [50]time.Time
 	sessionPets int
+	mutex       sync.Mutex
 }
 
 type ClientMessage struct {
 	Name    string `json:"name"`
 	Message string `json:"message"`
+}
+
+type PetEvent struct {
+	User  *db.User
+	Count int
 }
 
 // HandleConnections upgrades HTTP to WebSocket and manages clients
@@ -182,9 +189,12 @@ func handlePet(client *Client) {
 
 	game.PetDaisy(&client.user)
 	client.lastPetTime = time.Now()
-	client.user.SaveToDB()
 
 	notifications <- newPetNotification()
+
+	//dbQueue <- PetEvent{User: &client.user, Count: 1}
+
+	client.user.SaveToDB()
 
 	if shouldUpdateLeaderboard() {
 		newData := game.GetTopX(topPlayerCount)
@@ -208,7 +218,7 @@ func handlePet(client *Client) {
 	}
 
 	if game.Counter%10000 == 0 {
-		sendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(game.Counter) + " times! 🎉")
+		sendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(int(game.Counter)) + " times! 🎉")
 	}
 
 	if game.Counter == 1_000_000 {
@@ -246,6 +256,19 @@ func handleChatMessages() {
 	}
 }
 
+/*func dbWorker() {
+	for event := range dbQueue {
+		err := event.User.SaveToDB()
+		if err != nil {
+			log.Println("Error saving to DB:", err)
+			continue
+		}
+		log.Println("Saved to DB:", event.User.DisplayName)
+	}
+}
+
+*/
+
 func autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
@@ -264,6 +287,10 @@ func autoSave() {
 }
 
 func sendDiscordWebhook(message string) {
+	if os.Getenv("ENVIRONMENT") == "dev" {
+		fmt.Println("not sending discord webhook in dev mode")
+		return
+	}
 	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
 
 	jsonData := []byte(`{"content": "` + message + `"}`)
@@ -291,7 +318,7 @@ func sendDiscordWebhook(message string) {
 
 func shouldUpdateLeaderboard() bool {
 	now := time.Now().UnixMilli()
-	if now > lastLeaderboardUpdate+250 {
+	if now > lastLeaderboardUpdate+50 {
 		lastLeaderboardUpdate = now
 		return true
 	}
@@ -306,7 +333,9 @@ func sendJSONToClient(client *Client, notification ClientMessage) {
 		return
 	}
 
+	client.mutex.Lock()
 	err = client.conn.WriteMessage(websocket.TextMessage, jsonData)
+	client.mutex.Unlock()
 
 	if err != nil {
 		fmt.Println("error networking message", err)

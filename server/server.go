@@ -18,6 +18,7 @@ func InitRoutes() {
 	go handleChatMessages()
 	go handleNotifications()
 	go autoSave()
+	//go dbWorker()
 }
 
 func RedirectHTTP() {
