@@ -92,7 +92,7 @@ function petDaisy() {
         message: `$!pet;${personalNumber}`,
     }
     ws.send(JSON.stringify(petMessage));
-    personalCounter.innerText = `You have pet her ${personalNumber} time${personalNumber === 1 ? "" : "s"}!`;
+    personalCounter.innerText = `You have pet her ${Number(personalNumber).toLocaleString()} time${personalNumber === 1 ? "" : "s"}!`;
 }
 
 /**

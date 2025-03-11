@@ -22,6 +22,11 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+const (
+	PET_WINDOW    = 25
+	SUS_THRESHOLD = 5
+)
+
 var (
 	clients          = make(map[*Client]bool)
 	webhookCooldowns = make(map[string]time.Time)
@@ -39,7 +44,8 @@ type Client struct {
 	id          string
 	user        db.User
 	lastPetTime time.Time
-	petTimes    [50]time.Time
+	susPets     int
+	petTimes    [PET_WINDOW]time.Time
 	sessionPets int
 	mutex       sync.Mutex
 }
@@ -151,36 +157,39 @@ func readMessages(client *Client) {
 
 // handlePet increments the pet count safely
 func handlePet(client *Client) {
-	petTimeIdx := client.sessionPets % 50
+	petTimeIdx := client.sessionPets % PET_WINDOW
 
 	client.petTimes[petTimeIdx] = time.Now()
-	if client.sessionPets > 0 && client.sessionPets%10 == 0 {
-		//fmt.Println("calculate st dev")
+	if client.sessionPets > 0 && client.sessionPets%PET_WINDOW == 0 {
 		intervals := make([]int64, 0)
 
 		// I start at 2 because for some reason the first interval is always a large negative. I'll figure it out later
-		for i := 2; i < 50; i++ {
+		for i := 2; i < PET_WINDOW; i++ {
 			if client.petTimes[i].IsZero() || client.petTimes[i-1].IsZero() {
 				continue
 			}
-			intervals = append(intervals, client.petTimes[i].Sub(client.petTimes[i-1]).Milliseconds())
+
+			interval := client.petTimes[i].Sub(client.petTimes[i-1]).Milliseconds()
+
+			intervals = append(intervals, interval)
+
+			if interval < 15 {
+				fmt.Println(interval)
+				client.susPets++
+			}
 		}
 
-		//fmt.Println("Intervals:", intervals)
 		mean := meanTime(intervals)
 		deviation := stdDev(intervals, mean)
-		//fmt.Println("Std Dev:", deviation)
+		fmt.Println("Mean:", mean)
+		fmt.Println("Deviation:", deviation)
 
-		if deviation < 0.5 {
-			cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
-			notifications <- serverNotification(cheaterCallout)
-			sendDiscordWebhook(cheaterCallout)
-
-			client.user.PetCount -= 50
-			game.Counter -= 50
-
-			client.conn.Close()
+		if deviation < 1 || client.susPets >= SUS_THRESHOLD {
+			fmt.Println("not good")
+			kickCheater(client, PET_WINDOW)
 			return
+		} else {
+			client.susPets = 0
 		}
 
 	}
@@ -234,6 +243,17 @@ func handlePet(client *Client) {
 		sendJSONToClient(client, nameUpdate)
 
 	}
+}
+
+func kickCheater(client *Client, penalty int) {
+	cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
+	notifications <- serverNotification(cheaterCallout)
+	sendDiscordWebhook(cheaterCallout)
+
+	client.user.PetCount -= penalty
+	game.Counter -= int64(penalty)
+
+	client.conn.Close()
 }
 
 // BROADCAST HANDLERS //

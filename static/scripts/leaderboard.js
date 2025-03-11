@@ -11,7 +11,7 @@ function displayLeaderboard(data) {
         const displayNameCol = document.createElement('td');
         const petsCol = document.createElement('td');
 
-        posCol.innerText = `${data[i].position}`;
+        posCol.innerText = `${Number(data[i].position).toLocaleString()}`;
         displayNameCol.innerText = `${data[i].display_name}`;
         petsCol.innerText = `${data[i].pet_count}`;
 
