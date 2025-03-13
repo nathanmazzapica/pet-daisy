@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,7 +25,7 @@ var upgrader = websocket.Upgrader{
 
 const (
 	PET_WINDOW    = 25
-	SUS_THRESHOLD = 5
+	SUS_THRESHOLD = 15
 )
 
 var (
@@ -85,14 +86,6 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	client := &Client{conn: conn, id: userID, user: *user}
 
-	defer func() {
-		mu.Lock()
-		delete(clients, client)
-		mu.Unlock()
-		conn.Close()
-		notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
-	}()
-
 	mu.Lock()
 	clients[client] = true
 	mu.Unlock()
@@ -111,17 +104,24 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	data, err := json.Marshal(game.GetTopX(topPlayerCount))
 	notifications <- ClientMessage{"leaderboard", string(data)}
 
-	readMessages(client)
+	go readMessages(client)
 }
 
 // readMessages handles incoming WebSocket messages
 func readMessages(client *Client) {
 	conn := client.conn
+	defer func() {
+		client.user.SaveToDB()
+		mu.Lock()
+		delete(clients, client)
+		mu.Unlock()
+		conn.Close()
+		notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
+		log.Println("Client disconnected.")
+	}()
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
-			client.user.SaveToDB()
-			fmt.Println("Client disconnected.")
 			notifications <- playerLeftNotification(client.user.DisplayName)
 			break
 		}
@@ -173,16 +173,16 @@ func handlePet(client *Client) {
 
 			intervals = append(intervals, interval)
 
-			if interval < 15 {
-				fmt.Println(interval)
-				client.susPets++
-			}
+			//if interval < 15 && interval > 6 {
+			//	fmt.Println(interval)
+			//	client.susPets++
+			//}
 		}
 
 		mean := meanTime(intervals)
 		deviation := stdDev(intervals, mean)
-		fmt.Println("Mean:", mean)
-		fmt.Println("Deviation:", deviation)
+		//fmt.Println("Mean:", mean)
+		//fmt.Println("Deviation:", deviation)
 
 		if deviation < 1 || client.susPets >= SUS_THRESHOLD {
 			fmt.Println("not good")
@@ -336,9 +336,19 @@ func sendDiscordWebhook(message string) {
 	}
 }
 
+func getDelay() int64 {
+	delay := int64(150*len(clients)) / 2
+
+	if delay > 1000 {
+		return 1000
+	}
+
+	return delay
+}
+
 func shouldUpdateLeaderboard() bool {
 	now := time.Now().UnixMilli()
-	if now > lastLeaderboardUpdate+50 {
+	if now > lastLeaderboardUpdate+getDelay() {
 		lastLeaderboardUpdate = now
 		return true
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
@@ -24,18 +25,58 @@ func main() {
 
 	server.InitRoutes()
 
+	sendDiscordWebhook("daisy is waking up")
+
 	environment := os.Getenv("ENVIRONMENT")
 	switch environment {
 	case "dev":
 		server.WsUrl = "ws://localhost:8080/ws"
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		err = http.ListenAndServe(":8080", nil)
+		sendDiscordWebhook(err.Error())
+		log.Fatal(err)
 	case "prod":
 		server.WsUrl = "wss://pethenry.com/ws"
 		go server.RedirectHTTP()
-		log.Fatal(server.StartHTTPS())
+		err = server.StartHTTPS()
+		sendDiscordWebhook(err.Error())
+		log.Fatal(err)
 	default:
 		fmt.Println("Invalid environment configuration")
 		return
+	}
+
+	sendDiscordWebhook("Daisy is going to sleep")
+	log.Println("[SHUTDOWN] Something caused an unexpected shutdown")
+}
+
+// lazily copying from websockets.go for now
+func sendDiscordWebhook(message string) {
+	if os.Getenv("ENVIRONMENT") == "dev" {
+		fmt.Println("not sending discord webhook in dev mode")
+		return
+	}
+	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
+
+	jsonData := []byte(`{"content": "` + message + `"}`)
+
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending webhook:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		fmt.Println("Discord webhook returned:", resp.Status)
 	}
 }
 

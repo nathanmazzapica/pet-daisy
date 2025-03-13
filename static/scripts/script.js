@@ -10,6 +10,11 @@ const noseHonk = new Audio("../static/honk.mp3");
 noseHonk.volume = 0.1;
 let nextHonk = 0;
 
+const clickSound = new Audio("../static/audio/click.mp3");
+clickSound.volume = 0.1;
+clickSound.preload = "auto"
+clickSound.currentTime = 0;
+
 
 daisy.addEventListener("click", (e) => {
 
@@ -17,6 +22,9 @@ daisy.addEventListener("click", (e) => {
         x: e.offsetX,
         y: e.offsetY
     }
+
+    clickSound.currentTime = 0;
+    clickSound.play();
 
     checkAndPerformEasterEggs(mousePos);
     petDaisy();
