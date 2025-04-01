@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
+	"github.com/nathanmazzapica/pet-daisy/logger"
 	"html/template"
 	"net/http"
 	"strings"
@@ -44,7 +45,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, &cookie)
 		default:
-			fmt.Println(err)
+			logger.LogError(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
 			// todo: make funny error html page
 			return
@@ -53,7 +54,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		userID = user_id.Value
 		user, err = db.GetUserFromDB(userID)
 		if err != nil {
-			fmt.Println(err)
+			logger.LogError(err)
 		}
 
 	}
@@ -82,6 +83,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println("error sending html", err)
+		logger.LogError(fmt.Errorf("failed to send html: %w", err))
 	}
 }
 
@@ -132,7 +134,7 @@ func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
 	err := tmpl.Execute(w, nil)
 
 	if err != nil {
-		fmt.Println("error sending html", err)
+		logger.LogError(fmt.Errorf("failed to send html: %w", err))
 	}
 }
 
@@ -141,7 +143,7 @@ func ServeBreak(w http.ResponseWriter, r *http.Request) {
 	err := tmpl.Execute(w, nil)
 
 	if err != nil {
-		fmt.Println("error sending html", err)
+		logger.LogError(fmt.Errorf("failed to send html: %w", err))
 	}
 }
 

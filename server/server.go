@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
 )
 
@@ -22,7 +22,7 @@ func InitRoutes() {
 }
 
 func RedirectHTTP() {
-	log.Fatal(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	logger.LogFatalError(http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://pethenry.com", http.StatusMovedPermanently)
 	})))
 }

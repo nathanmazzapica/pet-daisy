@@ -7,6 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
+	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/server"
 	"log"
 	"net/http"
@@ -19,6 +20,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
+
+	logger.InitLog()
+	defer logger.CloseLog()
 
 	db.Connect()
 	game.InitCounter()
@@ -47,6 +51,7 @@ func main() {
 
 	sendDiscordWebhook("Daisy is going to sleep")
 	log.Println("[SHUTDOWN] Something caused an unexpected shutdown")
+
 }
 
 // lazily copying from websockets.go for now

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/nathanmazzapica/pet-daisy/logger"
 	"log"
 	"net/http"
 	"os"
@@ -12,10 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
-
-	"github.com/gorilla/websocket"
 	_ "net/http/pprof"
 )
 
@@ -49,6 +49,9 @@ type Client struct {
 	petTimes    [PET_WINDOW]time.Time
 	sessionPets int
 	mutex       sync.Mutex
+
+	hub  *Hub
+	send chan []byte
 }
 
 type ClientMessage struct {
@@ -68,19 +71,19 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := db.GetUserID(r)
 	if err != nil {
-		fmt.Println("Could not retrieve user ID:", err)
+		logger.ErrLog.Println("Could not retrieve user ID:", err)
 		return
 	}
 
 	user, err := db.GetUserFromDB(userID)
 	if err != nil {
-		fmt.Println(err)
+		logger.ErrLog.Println(err)
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println("Error upgrading connection:", err)
+		logger.ErrLog.Println("Error upgrading connection:", err)
 		return
 	}
 
@@ -128,7 +131,7 @@ func readMessages(client *Client) {
 
 		var clientMsg ClientMessage
 		if err := json.Unmarshal(msg, &clientMsg); err != nil {
-			fmt.Println("error decoding json:", err)
+			logger.ErrLog.Println("Error decoding json:", err)
 			continue
 		}
 
@@ -172,17 +175,10 @@ func handlePet(client *Client) {
 			interval := client.petTimes[i].Sub(client.petTimes[i-1]).Milliseconds()
 
 			intervals = append(intervals, interval)
-
-			//if interval < 15 && interval > 6 {
-			//	fmt.Println(interval)
-			//	client.susPets++
-			//}
 		}
 
 		mean := meanTime(intervals)
 		deviation := stdDev(intervals, mean)
-		//fmt.Println("Mean:", mean)
-		//fmt.Println("Deviation:", deviation)
 
 		if deviation < 1 || client.susPets >= SUS_THRESHOLD {
 			fmt.Println("not good")
@@ -296,7 +292,8 @@ func autoSave() {
 		mu.RLock()
 		for client := range clients {
 			if err := client.user.SaveToDB(); err != nil {
-				fmt.Printf("Error saving user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
+				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
+				logger.ErrLog.Println(errStr)
 				continue
 			}
 			fmt.Printf("Saved user %s to db\n", client.user.DisplayName)
@@ -317,7 +314,7 @@ func sendDiscordWebhook(message string) {
 
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		logger.ErrLog.Println("Failed to create Discord webhook request:", err)
 		return
 	}
 
@@ -326,7 +323,7 @@ func sendDiscordWebhook(message string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending webhook:", err)
+		logger.ErrLog.Println("Failed to send webhook:", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -364,11 +361,13 @@ func sendJSONToClient(client *Client, notification ClientMessage) {
 	}
 
 	client.mutex.Lock()
-	err = client.conn.WriteMessage(websocket.TextMessage, jsonData)
-	client.mutex.Unlock()
+	defer client.mutex.Unlock()
 
+	client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
+	err = client.conn.WriteMessage(websocket.TextMessage, jsonData)
 	if err != nil {
-		fmt.Println("error networking message", err)
+		logger.ErrLog.Printf("Failed to network message to client: %s\n %v", client.conn.RemoteAddr().String(), err)
 		client.conn.Close()
 		mu.Lock()
 		delete(clients, client)

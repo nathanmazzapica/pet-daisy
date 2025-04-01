@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/nathanmazzapica/pet-daisy/logger"
 	"math/rand"
 	"net/http"
 )
@@ -110,7 +111,7 @@ func (u *User) UpdateDisplayName(name string) {
 	_, err := DB.Exec("UPDATE users SET display_name = ? WHERE user_id = ?", name, u.UserID)
 
 	if err != nil {
-		fmt.Println("error updating display name", err)
+		logger.LogError(fmt.Errorf("failed to update user display name: %w", err))
 	}
 }
 
