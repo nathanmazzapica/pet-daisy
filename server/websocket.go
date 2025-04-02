@@ -1,13 +1,12 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/logger"
+	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,36 +28,21 @@ const (
 )
 
 var (
-	clients          = make(map[*Client]bool)
+	// Set of clients
+	clients = make(map[*Client]bool)
+
+	// The cooldown between sending webhook notifications about relevant clients to the discord server
 	webhookCooldowns = make(map[string]time.Time)
-	mu               sync.RWMutex
-	messages         = make(chan ClientMessage)
-	notifications    = make(chan ClientMessage)
-	//dbQueue               = make(chan PetEvent, 10000)
+
+	mu            sync.RWMutex
+	messages      = make(chan ClientMessage)
+	notifications = make(chan ClientMessage)
+
 	topPlayerCount        = 10
 	lastLeaderboardUpdate = int64(0)
 )
 
-// Client represents a WebSocket connection
-type Client struct {
-	conn        *websocket.Conn
-	id          string
-	user        db.User
-	lastPetTime time.Time
-	susPets     int
-	petTimes    [PET_WINDOW]time.Time
-	sessionPets int
-	mutex       sync.Mutex
-
-	hub  *Hub
-	send chan []byte
-}
-
-type ClientMessage struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
-}
-
+// PetEvent is unused
 type PetEvent struct {
 	User  *db.User
 	Count int
@@ -95,12 +79,13 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Client connected.")
 
+	// Will be moved to hub.broadcast <- { Message }
 	notifications <- newPetNotification()
 	notifications <- playerJoinNotification(client.user.DisplayName)
 	notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
 
 	if lastConnectTime, ok := webhookCooldowns[client.user.UserID]; !ok || lastConnectTime.Before(time.Now().Add(-2*time.Minute)) {
-		sendDiscordWebhook("🌼 " + client.user.DisplayName + " has connected to Daisy! 🌼")
+		utils.SendDiscordWebhook("🌼 " + client.user.DisplayName + " has connected to Daisy! 🌼")
 		webhookCooldowns[client.user.UserID] = time.Now()
 	}
 
@@ -215,7 +200,7 @@ func handlePet(client *Client) {
 
 	if personal == 10 || personal == 50 || personal == 100 || personal == 500 || personal%1000 == 0 {
 		notifications <- newAchievmentNotification(client.user.DisplayName, personal)
-		sendDiscordWebhook("🎉 " + client.user.DisplayName + " has pet daisy " + strconv.Itoa(personal) + " times! 🎉")
+		utils.SendDiscordWebhook("🎉 " + client.user.DisplayName + " has pet daisy " + strconv.Itoa(personal) + " times! 🎉")
 	}
 
 	if game.Counter%1000 == 0 {
@@ -223,14 +208,14 @@ func handlePet(client *Client) {
 	}
 
 	if game.Counter%10000 == 0 {
-		sendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(int(game.Counter)) + " times! 🎉")
+		utils.SendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(int(game.Counter)) + " times! 🎉")
 	}
 
 	if game.Counter == 1_000_000 {
 		activeEvent = "milEvent.js"
 		notifications <- ClientMessage{Name: "milEvent", Message: activeEvent}
 		trophy := fmt.Sprintf("🌼 %s 🌼", client.user.DisplayName)
-		sendDiscordWebhook(fmt.Sprintf("🏆 %s was Daisy's 1,000,000th pet! 🏆", client.user.DisplayName))
+		utils.SendDiscordWebhook(fmt.Sprintf("🏆 %s was Daisy's 1,000,000th pet! 🏆", client.user.DisplayName))
 
 		client.user.UpdateDisplayName(trophy)
 		client.user.DisplayName = trophy
@@ -244,7 +229,7 @@ func handlePet(client *Client) {
 func kickCheater(client *Client, penalty int) {
 	cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
 	notifications <- serverNotification(cheaterCallout)
-	sendDiscordWebhook(cheaterCallout)
+	utils.SendDiscordWebhook(cheaterCallout)
 
 	client.user.PetCount -= penalty
 	game.Counter -= int64(penalty)
@@ -300,36 +285,6 @@ func autoSave() {
 		}
 		mu.RUnlock()
 		fmt.Println("Autosave complete.")
-	}
-}
-
-func sendDiscordWebhook(message string) {
-	if os.Getenv("ENVIRONMENT") == "dev" {
-		fmt.Println("not sending discord webhook in dev mode")
-		return
-	}
-	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
-
-	jsonData := []byte(`{"content": "` + message + `"}`)
-
-	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		logger.ErrLog.Println("Failed to create Discord webhook request:", err)
-		return
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.ErrLog.Println("Failed to send webhook:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		fmt.Println("Discord webhook returned:", resp.Status)
 	}
 }
 

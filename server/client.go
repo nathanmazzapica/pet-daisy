@@ -1,11 +1,33 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
+	"net/http"
+	"sync"
 	"time"
 )
+
+// Client represents a WebSocket connection
+type Client struct {
+	conn        *websocket.Conn
+	id          string
+	user        db.User
+	lastPetTime time.Time
+	susPets     int
+	petTimes    [PET_WINDOW]time.Time
+	sessionPets int
+	mutex       sync.Mutex
+
+	hub  *Hub
+	send chan []byte
+}
+
+type ClientMessage struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+}
 
 const (
 	writeWait      = 10 * time.Second
@@ -52,8 +74,21 @@ func (c *Client) writePump() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			//TODO: implement handling
-			fmt.Println(message)
+
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			w.Write(message)
+
+			n := len(c.send)
+			for i := 0; i < n; i++ {
+				w.Write(<-c.send)
+			}
+
+			if err := w.Close(); err != nil {
+				return
+			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -61,4 +96,9 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+// ServeWs creates the client WS connection and registers it to the provided hub
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+
 }
