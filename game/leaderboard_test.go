@@ -8,11 +8,11 @@ import (
 
 	"github.com/nathanmazzapica/pet-daisy/db"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func setupTestDB() {
-	db.DB, _ = sql.Open("sqlite3", ":memory:") // Use in-memory DB
+	db.DB, _ = sql.Open("sqlite", ":memory:") // Use in-memory DB
 	_, err := db.DB.Exec("CREATE TABLE users (user_id TEXT PRIMARY KEY, display_name TEXT, pets INTEGER)")
 	if err != nil {
 		log.Fatal(err)

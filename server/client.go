@@ -1,10 +1,10 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -25,6 +25,7 @@ type Client struct {
 }
 
 type ClientMessage struct {
+	//Client  *Client `json:"-"`
 	Name    string `json:"name"`
 	Message string `json:"message"`
 }
@@ -54,7 +55,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.hub.broadcast <- msg
+		c.hub.receive <- msg
 	}
 }
 
@@ -77,6 +78,7 @@ func (c *Client) writePump() {
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				fmt.Println(err)
 				return
 			}
 			w.Write(message)
@@ -96,9 +98,4 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-// ServeWs creates the client WS connection and registers it to the provided hub
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-
 }

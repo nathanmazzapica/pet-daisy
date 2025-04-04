@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/joho/godotenv"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/server"
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
+	_ "modernc.org/sqlite"
 	"net/http"
 	"os"
 )

@@ -37,7 +37,10 @@ ws.onopen = () => {
 
 
 ws.onmessage = (event) => {
+    console.log("HEEEEEEEE")
+    console.log(JSON.stringify(event.data));
     const data = JSON.parse(event.data);
+    console.log(data)
 
     if (data.name === "petCounter") {
         let prettyCount = Number(data.message).toLocaleString()

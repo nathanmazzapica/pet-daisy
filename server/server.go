@@ -5,7 +5,13 @@ import (
 	"net/http"
 )
 
+var hub *Hub
+
 func InitRoutes() {
+
+	hub = newHub()
+	go hub.run()
+
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	//http.HandleFunc("/", ServeBreak)
 	http.HandleFunc("/", ServeHome)

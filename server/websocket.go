@@ -7,8 +7,6 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -66,81 +64,20 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		logger.ErrLog.Println("Error upgrading connection:", err)
+		logger.ErrLog.Println(err)
 		return
 	}
 
-	client := &Client{conn: conn, id: userID, user: *user}
+	client := &Client{conn: conn, id: userID, user: *user, hub: hub, send: make(chan []byte, 256)}
 
-	mu.Lock()
-	clients[client] = true
-	mu.Unlock()
+	client.hub.register <- client
 
 	fmt.Println("Client connected.")
 
-	// Will be moved to hub.broadcast <- { Message }
-	notifications <- newPetNotification()
-	notifications <- playerJoinNotification(client.user.DisplayName)
-	notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
-
-	if lastConnectTime, ok := webhookCooldowns[client.user.UserID]; !ok || lastConnectTime.Before(time.Now().Add(-2*time.Minute)) {
-		utils.SendDiscordWebhook("🌼 " + client.user.DisplayName + " has connected to Daisy! 🌼")
-		webhookCooldowns[client.user.UserID] = time.Now()
-	}
-
-	data, err := json.Marshal(game.GetTopX(topPlayerCount))
-	notifications <- ClientMessage{"leaderboard", string(data)}
-
-	go readMessages(client)
-}
-
-// readMessages handles incoming WebSocket messages
-func readMessages(client *Client) {
-	conn := client.conn
-	defer func() {
-		client.user.SaveToDB()
-		mu.Lock()
-		delete(clients, client)
-		mu.Unlock()
-		conn.Close()
-		notifications <- ClientMessage{"playerCount", strconv.Itoa(len(clients))}
-		log.Println("Client disconnected.")
-	}()
-	for {
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			notifications <- playerLeftNotification(client.user.DisplayName)
-			break
-		}
-
-		var clientMsg ClientMessage
-		if err := json.Unmarshal(msg, &clientMsg); err != nil {
-			logger.ErrLog.Println("Error decoding json:", err)
-			continue
-		}
-
-		if strings.Contains(clientMsg.Message, "$!pet;") {
-			handlePet(client)
-		} else {
-			clientMsg.Name = client.user.DisplayName
-			messages <- clientMsg
-
-			if strings.Contains(strings.ToLower(clientMsg.Message), "daisy") {
-
-				switch strings.ToLower(clientMsg.Message) {
-				case "hi daisy":
-					messages <- ClientMessage{"Daisy", fmt.Sprintf("hi %v", client.user.DisplayName)}
-				case "i love you daisy":
-					messages <- ClientMessage{"Daisy", fmt.Sprintf("i love you %v", client.user.DisplayName)}
-				case "daisy why are you so cute":
-					messages <- ClientMessage{"Daisy", fmt.Sprintf("stop flirting with me %v... arf", client.user.DisplayName)}
-				default:
-					messages <- daisyMessage()
-				}
-			}
-		}
-	}
+	go client.writePump()
+	go client.readPump()
 }
 
 // handlePet increments the pet count safely
@@ -178,57 +115,16 @@ func handlePet(client *Client) {
 	client.sessionPets++
 
 	game.PetDaisy(&client.user)
+	log.Println("Pet Daisy:", client.user.DisplayName)
+	log.Println("New count:", game.Counter)
 	client.lastPetTime = time.Now()
-
-	notifications <- newPetNotification()
-
-	//dbQueue <- PetEvent{User: &client.user, Count: 1}
 
 	client.user.SaveToDB()
 
-	if shouldUpdateLeaderboard() {
-		newData := game.GetTopX(topPlayerCount)
-
-		data, err := json.Marshal(newData)
-		if err != nil {
-			fmt.Println("error encoding json:", err)
-		}
-		notifications <- ClientMessage{"leaderboard", string(data)}
-	}
-
-	personal := client.user.PetCount
-
-	if personal == 10 || personal == 50 || personal == 100 || personal == 500 || personal%1000 == 0 {
-		notifications <- newAchievmentNotification(client.user.DisplayName, personal)
-		utils.SendDiscordWebhook("🎉 " + client.user.DisplayName + " has pet daisy " + strconv.Itoa(personal) + " times! 🎉")
-	}
-
-	if game.Counter%1000 == 0 {
-		notifications <- newMilestoneNotification()
-	}
-
-	if game.Counter%10000 == 0 {
-		utils.SendDiscordWebhook("🎉 " + " Daisy has been pet " + strconv.Itoa(int(game.Counter)) + " times! 🎉")
-	}
-
-	if game.Counter == 1_000_000 {
-		activeEvent = "milEvent.js"
-		notifications <- ClientMessage{Name: "milEvent", Message: activeEvent}
-		trophy := fmt.Sprintf("🌼 %s 🌼", client.user.DisplayName)
-		utils.SendDiscordWebhook(fmt.Sprintf("🏆 %s was Daisy's 1,000,000th pet! 🏆", client.user.DisplayName))
-
-		client.user.UpdateDisplayName(trophy)
-		client.user.DisplayName = trophy
-
-		nameUpdate := ClientMessage{Name: "updateDisplay", Message: trophy}
-		sendJSONToClient(client, nameUpdate)
-
-	}
 }
 
 func kickCheater(client *Client, penalty int) {
 	cheaterCallout := fmt.Sprintf("😡 %s is cheating!! 😡", client.user.DisplayName)
-	notifications <- serverNotification(cheaterCallout)
 	utils.SendDiscordWebhook(cheaterCallout)
 
 	client.user.PetCount -= penalty
@@ -273,7 +169,6 @@ func handleChatMessages() {
 func autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
-		messages <- daisyMessage()
 		mu.RLock()
 		for client := range clients {
 			if err := client.user.SaveToDB(); err != nil {

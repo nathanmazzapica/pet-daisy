@@ -2,5 +2,5 @@
 *.sh
 *.env
 .env
-
+logs/
 .DS_Store

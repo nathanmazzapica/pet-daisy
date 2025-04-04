@@ -60,6 +60,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("USER: {%s} CONNECTED\n", user.DisplayName)
+	fmt.Println("serving home")
 
 	data := struct {
 		User      string
