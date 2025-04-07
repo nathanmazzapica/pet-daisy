@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
+	"log"
 	"sync"
 	"time"
 )
@@ -21,13 +22,7 @@ type Client struct {
 	mutex       sync.Mutex
 
 	hub  *Hub
-	send chan []byte
-}
-
-type ClientMessage struct {
-	//Client  *Client `json:"-"`
-	Name    string `json:"name"`
-	Message string `json:"message"`
+	send chan ServerMessage
 }
 
 const (
@@ -55,7 +50,15 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.hub.receive <- msg
+
+		message, err := prepareRawMessage(msg, c)
+
+		if err != nil {
+			log.Printf("Error processing raw message: %v", err)
+			continue
+		}
+
+		c.hub.receive <- message
 	}
 }
 

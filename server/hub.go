@@ -5,15 +5,14 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"log"
 	"strings"
-	"sync/atomic"
 )
 
 type Hub struct {
 	clients map[*Client]bool
 
-	receive chan []byte
+	receive chan ClientMessage
 
-	broadcast chan []byte
+	broadcast chan ServerMessage
 
 	register chan *Client
 
@@ -22,8 +21,8 @@ type Hub struct {
 
 func newHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
-		receive:    make(chan []byte),
+		broadcast:  make(chan ServerMessage),
+		receive:    make(chan ClientMessage),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
@@ -43,31 +42,32 @@ func (h *Hub) run() {
 				client.user.SaveToDB()
 			}
 		case message := <-h.receive:
-			log.Println("Received message:", string(message))
-			// process message
+			log.Println("Received message:", message)
 
-			var clientMessage ClientMessage
-
-			if err := json.Unmarshal(message, &clientMessage); err != nil {
-				log.Println("Failed to unmarshal message:", err)
-				continue
-			}
-
-			if strings.Contains(clientMessage.Message, "$!pet;") {
-				atomic.AddInt64(&game.Counter, 1)
+			// This needs to be moved eventually.
+			if strings.Contains(message.Message, "$!pet;") {
+				game.PetDaisy(&message.Client.user)
 				petCountUpdate := newPetNotification()
 
-				data, err := json.Marshal(petCountUpdate)
+				h.broadcast <- petCountUpdate.toBytes()
 
+				// ditto... this is MESSY imo but it works for now
+				lbData := game.GetTopX(10)
+
+				data, err := json.Marshal(lbData)
 				if err != nil {
-					log.Println("Failed to marshal pet count:", err)
+					log.Println(err)
+					continue
 				}
 
-				h.broadcast <- data
+				leaderboardUpdate := ServerMessage{"leaderboard", string(data)}
+
+				h.broadcast <- leaderboardUpdate
+
 				continue
 			}
 
-			h.broadcast <- message
+			h.broadcast <- message.toServerMessage()
 		}
 	}
 }
@@ -76,7 +76,7 @@ func (h *Hub) broadcastMessages() {
 	for {
 		message := <-h.broadcast
 
-		log.Printf("Broadcasting message: %s to %d clients", string(message), len(h.clients))
+		log.Printf("Broadcasting message: %s to %d clients", message, len(h.clients))
 
 		for client := range h.clients {
 			select {
