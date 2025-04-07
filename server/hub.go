@@ -1,8 +1,6 @@
 package server
 
 import (
-	"encoding/json"
-	"github.com/nathanmazzapica/pet-daisy/game"
 	"log"
 	"strings"
 )
@@ -34,41 +32,46 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = true
+			h.handleClientRegister(client)
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-				client.user.SaveToDB()
-			}
+			h.handleClientUnregister(client)
 		case message := <-h.receive:
-			log.Println("Received message:", message)
-
-			// This needs to be moved eventually.
-			if strings.Contains(message.Message, "$!pet;") {
-				game.PetDaisy(&message.Client.user)
-				petCountUpdate := newPetNotification()
-
-				h.broadcast <- petCountUpdate
-
-				// ditto... this is MESSY imo but it works for now
-				lbData := game.GetTopX(10)
-
-				data, err := json.Marshal(lbData)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-
-				leaderboardUpdate := ServerMessage{"leaderboard", string(data)}
-
-				h.broadcast <- leaderboardUpdate
-
-				continue
-			}
-
-			h.broadcast <- message.toServerMessage()
+			h.handleIncomingMessage(message)
 		}
+	}
+}
+
+func (h *Hub) handleIncomingMessage(message ClientMessage) {
+	log.Println("Received message:", message)
+
+	if strings.Contains(message.Message, "$!pet;") {
+
+		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
+
+		handlePet(message.Client)
+		h.broadcast <- newPetNotification()
+		h.broadcast <- leaderboardUpdateNotification()
+
+		return
+	}
+
+	h.broadcast <- message.toServerMessage()
+}
+
+func (h *Hub) handleClientRegister(client *Client) {
+	h.clients[client] = true
+	h.broadcast <- playerJoinNotification(client.user.DisplayName)
+	h.broadcast <- playerCountNotification()
+}
+
+func (h *Hub) handleClientUnregister(client *Client) {
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		close(client.send)
+		client.user.SaveToDB()
+
+		h.broadcast <- playerLeftNotification(client.user.DisplayName)
+		h.broadcast <- playerCountNotification()
 	}
 }
 

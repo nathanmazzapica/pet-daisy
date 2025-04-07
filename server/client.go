@@ -50,7 +50,7 @@ func (c *Client) readPump() {
 			break
 		}
 
-		message, err := prepareRawMessage(msg, c)
+		message, err := buildClientMessage(msg, c)
 
 		if err != nil {
 			log.Printf("Error processing raw message: %v", err)

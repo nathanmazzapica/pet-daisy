@@ -21,10 +21,7 @@ func InitRoutes() {
 	http.HandleFunc("/roadmap", ServeRoadmap)
 	http.HandleFunc("/error", ServeError)
 
-	go handleChatMessages()
-	go handleNotifications()
 	go autoSave()
-	//go dbWorker()
 }
 
 func RedirectHTTP() {

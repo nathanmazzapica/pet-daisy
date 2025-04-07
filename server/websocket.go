@@ -140,39 +140,6 @@ func kickCheater(client *Client, penalty int) {
 	client.conn.Close()
 }
 
-// BROADCAST HANDLERS //
-func handleNotifications() {
-	for {
-		newNotification := <-notifications
-
-		for client := range clients {
-			sendJSONToClient(client, newNotification)
-		}
-	}
-}
-
-func handleChatMessages() {
-	for {
-		newChatMessage := <-messages
-		for client := range clients {
-			sendJSONToClient(client, newChatMessage)
-		}
-	}
-}
-
-/*func dbWorker() {
-	for event := range dbQueue {
-		err := event.User.SaveToDB()
-		if err != nil {
-			log.Println("Error saving to DB:", err)
-			continue
-		}
-		log.Println("Saved to DB:", event.User.DisplayName)
-	}
-}
-
-*/
-
 func autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)

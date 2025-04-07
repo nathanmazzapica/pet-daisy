@@ -14,7 +14,8 @@ type ServerMessage struct {
 	Message string `json:"message"`
 }
 
-func prepareRawMessage(rawData []byte, client *Client) (ClientMessage, error) {
+// buildClientMessage converts an incoming slice of raw byte data into a usable ClientMessage
+func buildClientMessage(rawData []byte, client *Client) (ClientMessage, error) {
 	var message ClientMessage
 
 	if err := json.Unmarshal(rawData, &message); err != nil {
@@ -26,17 +27,19 @@ func prepareRawMessage(rawData []byte, client *Client) (ClientMessage, error) {
 	return message, nil
 }
 
-// I don't think I actually need this; review soon thx
+// Deprecated: toBytes converts a ClientMessage to a slice of bytes.
 func (message *ClientMessage) toBytes() []byte {
 	data, _ := json.Marshal(message)
 	return data
 }
 
+// Deprecated: toBytes converts a ServerMessage to a slice of bytes.
 func (message *ServerMessage) toBytes() []byte {
 	data, _ := json.Marshal(message)
 	return data
 }
 
+// toServerMessage converts a ClientMessage into a ServerMessage.
 func (message *ClientMessage) toServerMessage() ServerMessage {
 	var broadcast ServerMessage
 	broadcast.Name = message.Name
