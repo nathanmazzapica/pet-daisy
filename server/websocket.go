@@ -70,9 +70,16 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{conn: conn, id: userID, user: *user, hub: hub, send: make(chan []byte, 256)}
+	client := &Client{conn: conn, id: userID, user: *user, hub: hub, send: make(chan ServerMessage, 256)}
 
 	client.hub.register <- client
+
+	// temp and gross.
+	lbData := game.GetTopX(10)
+	data, _ := json.Marshal(lbData)
+
+	leaderboardUpdate := ServerMessage{"leaderboard", string(data)}
+	client.hub.broadcast <- leaderboardUpdate
 
 	fmt.Println("Client connected.")
 

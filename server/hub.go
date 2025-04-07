@@ -49,7 +49,7 @@ func (h *Hub) run() {
 				game.PetDaisy(&message.Client.user)
 				petCountUpdate := newPetNotification()
 
-				h.broadcast <- petCountUpdate.toBytes()
+				h.broadcast <- petCountUpdate
 
 				// ditto... this is MESSY imo but it works for now
 				lbData := game.GetTopX(10)
@@ -75,8 +75,6 @@ func (h *Hub) run() {
 func (h *Hub) broadcastMessages() {
 	for {
 		message := <-h.broadcast
-
-		log.Printf("Broadcasting message: %s to %d clients", message, len(h.clients))
 
 		for client := range h.clients {
 			select {
