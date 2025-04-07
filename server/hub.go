@@ -1,8 +1,9 @@
 package server
 
 import (
+	"github.com/nathanmazzapica/pet-daisy/game"
+	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
-	"strings"
 )
 
 type Hub struct {
@@ -44,13 +45,25 @@ func (h *Hub) run() {
 func (h *Hub) handleIncomingMessage(message ClientMessage) {
 	log.Println("Received message:", message)
 
-	if strings.Contains(message.Message, "$!pet;") {
+	if message.Message == "$!pet" {
 
 		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
 
 		handlePet(message.Client)
 		h.broadcast <- newPetNotification()
-		h.broadcast <- leaderboardUpdateNotification()
+
+		if shouldUpdateLeaderboard() {
+			h.broadcast <- leaderboardUpdateNotification()
+		}
+
+		count := message.Client.user.PetCount
+		if game.CheckPersonalMilestone(count) {
+			h.broadcast <- newAchievmentNotification(message.Client.DisplayName(), count)
+		}
+
+		if game.CheckMilestone() {
+			h.broadcast <- newMilestoneNotification()
+		}
 
 		return
 	}
@@ -60,8 +73,10 @@ func (h *Hub) handleIncomingMessage(message ClientMessage) {
 
 func (h *Hub) handleClientRegister(client *Client) {
 	h.clients[client] = true
-	h.broadcast <- playerJoinNotification(client.user.DisplayName)
+	h.broadcast <- playerJoinNotification(client.DisplayName())
 	h.broadcast <- playerCountNotification()
+	utils.SendPlayerConnectionWebhook(client.DisplayName())
+
 }
 
 func (h *Hub) handleClientUnregister(client *Client) {

@@ -1,11 +1,9 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/utils"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -32,10 +30,7 @@ var (
 	// The cooldown between sending webhook notifications about relevant clients to the discord server
 	webhookCooldowns = make(map[string]time.Time)
 
-	mu            sync.RWMutex
-	messages      = make(chan ClientMessage)
-	notifications = make(chan ClientMessage)
-
+	mu                    sync.RWMutex
 	topPlayerCount        = 10
 	lastLeaderboardUpdate = int64(0)
 )
@@ -48,9 +43,6 @@ type PetEvent struct {
 
 // HandleConnections upgrades HTTP to WebSocket and manages clients
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("hello!")
-	fmt.Println("Cookie header:", r.Header.Get("Cookie"))
-
 	userID, err := db.GetUserID(r)
 	if err != nil {
 		logger.ErrLog.Println("Could not retrieve user ID:", err)
@@ -74,12 +66,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	client.hub.register <- client
 
-	// temp and gross.
-	lbData := game.GetTopX(10)
-	data, _ := json.Marshal(lbData)
-
-	leaderboardUpdate := ServerMessage{"leaderboard", string(data)}
-	client.hub.broadcast <- leaderboardUpdate
+	client.hub.broadcast <- leaderboardUpdateNotification()
 
 	fmt.Println("Client connected.")
 
@@ -122,12 +109,7 @@ func handlePet(client *Client) {
 	client.sessionPets++
 
 	game.PetDaisy(&client.user)
-	log.Println("Pet Daisy:", client.user.DisplayName)
-	log.Println("New count:", game.Counter)
 	client.lastPetTime = time.Now()
-
-	client.user.SaveToDB()
-
 }
 
 func kickCheater(client *Client, penalty int) {
@@ -174,27 +156,4 @@ func shouldUpdateLeaderboard() bool {
 		return true
 	}
 	return false
-}
-
-func sendJSONToClient(client *Client, notification ClientMessage) {
-	jsonData, err := json.Marshal(notification)
-
-	if err != nil {
-		fmt.Println("error encoding json:", err)
-		return
-	}
-
-	client.mutex.Lock()
-	defer client.mutex.Unlock()
-
-	client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-
-	err = client.conn.WriteMessage(websocket.TextMessage, jsonData)
-	if err != nil {
-		logger.ErrLog.Printf("Failed to network message to client: %s\n %v", client.conn.RemoteAddr().String(), err)
-		client.conn.Close()
-		mu.Lock()
-		delete(clients, client)
-		mu.Unlock()
-	}
 }

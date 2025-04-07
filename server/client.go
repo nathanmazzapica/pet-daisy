@@ -92,3 +92,7 @@ func (c *Client) writePump() {
 		}
 	}
 }
+
+func (c *Client) DisplayName() string {
+	return c.user.DisplayName
+}

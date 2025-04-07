@@ -100,7 +100,7 @@ function petDaisy() {
     personalNumber++;
     petMessage = {
         name: displayName,
-        message: `$!pet;${personalNumber}`,
+        message: `$!pet`,
     }
     ws.send(JSON.stringify(petMessage));
     personalCounter.innerText = `You have pet her ${Number(personalNumber).toLocaleString()} time${personalNumber === 1 ? "" : "s"}!`;

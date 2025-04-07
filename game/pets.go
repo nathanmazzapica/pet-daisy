@@ -21,3 +21,13 @@ func PetDaisy(user *db.User) {
 
 	//fmt.Printf("%s pet Daisy! Total pets: %d\n", user.DisplayName, Counter)
 }
+
+func CheckPersonalMilestone(count int) bool {
+	return count == 10 || count == 25 || count == 50 || count == 100 || count%1000 == 0
+}
+
+func CheckMilestone() bool {
+	if Counter%25_000 == 0 {
+		return true
+	}
+}

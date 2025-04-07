@@ -6,10 +6,13 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
 	"os"
+	"time"
 )
 
+var cooldowns = make(map[string]time.Time)
+
 func SendDiscordWebhook(message string) {
-	if os.Getenv("ENVIRONMENT") == "dev" {
+	if os.Getenv("ENVIRONMENT") == "dev" && false {
 		fmt.Println("not sending discord webhook in dev mode")
 		return
 	}
@@ -36,4 +39,22 @@ func SendDiscordWebhook(message string) {
 	if resp.StatusCode != http.StatusNoContent {
 		fmt.Println("Discord webhook returned:", resp.Status)
 	}
+}
+
+func SendPlayerConnectionWebhook(username string) {
+	if cooldowns[username].After(time.Now()) {
+		return
+	}
+	message := fmt.Sprintf("%s has connected! 🌼", username)
+	SendDiscordWebhook(message)
+	cooldowns[username] = time.Now().Add(time.Minute * 5)
+}
+
+func SendPlayerDisconnectWebhook(username string) {
+	if cooldowns[username].After(time.Now()) {
+		return
+	}
+	message := fmt.Sprintf("%s has disconnected... 💔", username)
+	SendDiscordWebhook(message)
+	cooldowns[username] = time.Now().Add(time.Minute * 1)
 }
