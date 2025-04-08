@@ -97,7 +97,7 @@ function sendMessage(message) {
 
     chatMessage = {
         name: displayName,
-        message
+        data: message
     }
 
     ws.send(JSON.stringify(chatMessage));

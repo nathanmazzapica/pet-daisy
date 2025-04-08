@@ -25,7 +25,6 @@ var daisyMessages = []string{
 }
 
 func newPetNotification() ServerMessage {
-	// CHECK BACK LATER
 	return ServerMessage{Name: "petCounter", Data: strconv.Itoa(int(game.Counter))}
 }
 

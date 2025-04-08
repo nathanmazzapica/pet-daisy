@@ -11,7 +11,7 @@ type ClientMessage struct {
 // Name = type; message = data. Don't feel like refactoring too much rn
 type ServerMessage struct {
 	Name string `json:"name"`
-	Data string `json:"message"`
+	Data string `json:"data"`
 }
 
 // buildClientMessage converts an incoming slice of raw byte data into a usable ClientMessage
