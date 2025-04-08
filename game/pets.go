@@ -27,7 +27,5 @@ func CheckPersonalMilestone(count int) bool {
 }
 
 func CheckMilestone() bool {
-	if Counter%25_000 == 0 {
-		return true
-	}
+	return Counter%25_000 == 0
 }

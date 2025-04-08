@@ -50,25 +50,24 @@ ws.onmessage = (event) => {
 
     if (data.name === "playerCount") {
         console.log("handle player count!")
-        console.log(data.message);
-        document.getElementById("player-count").innerText = `Online Players: ${data.message}`;
+        document.getElementById("player-count").innerText = `Online Players: ${data.data}`;
         return;
     }
 
     if (data.name === "server") {
         console.log("handle server notification")
-        console.log(data.message)
-        if (data.message.indexOf("hi!") !== -1 || data.message.indexOf(":(") !== -1) {
-            chatMessageContainer.appendChild(displayServerChatNotification(data.message));
+        console.log(data.data)
+        if (data.data.indexOf("hi!") !== -1 || data.data.indexOf(":(") !== -1) {
+            chatMessageContainer.appendChild(displayServerChatNotification(data.data));
         }
-        displayToast("Notification", data.message, 2000);
+        displayToast("Notification", data.data, 2000);
         return;
     }
 
     if (data.name === "leaderboard") {
         console.log("handle leaderboard notification")
-        console.log(JSON.parse(data.message));
-        displayLeaderboard(JSON.parse(data.message));
+        console.log(JSON.parse(data.data));
+        displayLeaderboard(JSON.parse(data.data));
         return;
     }
 
@@ -80,14 +79,13 @@ ws.onmessage = (event) => {
 
 
     if (data.name === "updateDisplay") {
-        buildMessage("Daisy", `${displayName} has changed their name to ${data.message}!`)
-        displayName = data.message;
+        buildMessage("Daisy", `${displayName} has changed their name to ${data.data}!`)
+        displayName = data.data;
         return
     }
 
-    console.log(`${data.name}: ${data.message}`);
 
-    chatMessageContainer.appendChild(buildMessage(data.name, data.message));
+    chatMessageContainer.appendChild(buildMessage(data.name, data.data));
     chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
 
 }
