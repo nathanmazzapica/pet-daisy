@@ -37,56 +37,32 @@ ws.onopen = () => {
 
 
 ws.onmessage = (event) => {
-    console.log("HEEEEEEEE")
-    console.log(JSON.stringify(event.data));
-    const data = JSON.parse(event.data);
-    console.log(data)
+    const message = JSON.parse(event.data);
 
-    if (data.name === "petCounter") {
-        let prettyCount = Number(data.data).toLocaleString()
-        counter.textContent = `Daisy has been pet ${prettyCount} times!`
-        return;
+    switch (message.name) {
+        case "petCounter":
+            handlePetCountUpdate(Number(message.data));
+            break;
+        case "playerCount":
+            handlePlayerCountUpdate(message.data);
+            break;
+        case "server":
+            handleServerNotification(message.data)
+            break;
+        case "leaderboard":
+            displayLeaderboard(JSON.parse(message.data));
+            break;
+        default:
+            handleIncomingChat(message.name, message.data)
     }
 
-    if (data.name === "playerCount") {
-        console.log("handle player count!")
-        document.getElementById("player-count").innerText = `Online Players: ${data.data}`;
-        return;
-    }
-
-    if (data.name === "server") {
-        console.log("handle server notification")
-        console.log(data.data)
-        if (data.data.indexOf("hi!") !== -1 || data.data.indexOf(":(") !== -1) {
-            chatMessageContainer.appendChild(displayServerChatNotification(data.data));
-        }
-        displayToast("Notification", data.data, 2000);
-        return;
-    }
-
-    if (data.name === "leaderboard") {
-        console.log("handle leaderboard notification")
-        console.log(JSON.parse(data.data));
-        displayLeaderboard(JSON.parse(data.data));
-        return;
-    }
-
-    if (data.name === "milEvent") {
-        activateMilestoneEvent()
-        buildMessage("Daisy", "Thank you guys so much for petting me 1,000,000 times! I invited all my friends to celebrate!")
-        return;
-    }
-
-
-    if (data.name === "updateDisplay") {
-        buildMessage("Daisy", `${displayName} has changed their name to ${data.data}!`)
-        displayName = data.data;
+    if (message.name === "updateDisplay") {
+        buildMessage("Daisy", `${displayName} has changed their name to ${message.data}!`)
+        displayName = message.data;
         return
     }
 
 
-    chatMessageContainer.appendChild(buildMessage(data.name, data.data));
-    chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
 
 }
 
@@ -102,6 +78,28 @@ function petDaisy() {
     }
     ws.send(JSON.stringify(petMessage));
     personalCounter.innerText = `You have pet her ${Number(personalNumber).toLocaleString()} time${personalNumber === 1 ? "" : "s"}!`;
+}
+
+function handlePetCountUpdate(petCount) {
+    let prettyCount = petCount.toLocaleString()
+    counter.textContent = `Daisy has been pet ${prettyCount} times!`
+}
+
+function handlePlayerCountUpdate(playerCount) {
+    document.getElementById("player-count").innerText = `Online Players: ${playerCount}`;
+}
+
+function handleServerNotification(content) {
+    if (content.indexOf("hi!") !== -1 || content.indexOf(":(") !== -1) {
+        chatMessageContainer.appendChild(displayServerChatNotification(content));
+    }
+    displayToast("Notification", content, 2000);
+}
+
+function handleIncomingChat(sender, content) {
+    chatMessageContainer.appendChild(buildMessage(sender, content));
+    chatMessageContainer.scrollTop = chatMessageContainer.scrollHeight;
+
 }
 
 /**

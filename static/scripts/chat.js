@@ -24,25 +24,6 @@ function displayServerChatNotification(content) {
     return notification;
 }
 
-/*
-function buildMessage(name, content) {
-    const message = document.createElement("p");
-    message.classList.add("message");
-
-    const sender = document.createElement("span")
-    sender.innerText = `${name}: `;
-
-    sender.classList.add('name');
-    if (name !== displayName) {
-        sender.classList.add('other')
-    }
-
-    message.textContent = content;
-    message.prepend(sender);
-
-    return message;
-}*/
-
 function buildMessage(name, content) {
     const message = document.createElement("p");
     message.classList.add("message");
