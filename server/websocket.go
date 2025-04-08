@@ -27,11 +27,7 @@ var (
 	// Set of clients
 	clients = make(map[*Client]bool)
 
-	// The cooldown between sending webhook notifications about relevant clients to the discord server
-	webhookCooldowns = make(map[string]time.Time)
-
 	mu                    sync.RWMutex
-	topPlayerCount        = 10
 	lastLeaderboardUpdate = int64(0)
 )
 

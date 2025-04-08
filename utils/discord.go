@@ -12,7 +12,7 @@ import (
 var cooldowns = make(map[string]time.Time)
 
 func SendDiscordWebhook(message string) {
-	if os.Getenv("ENVIRONMENT") == "dev" && false {
+	if os.Getenv("ENVIRONMENT") == "dev" {
 		fmt.Println("not sending discord webhook in dev mode")
 		return
 	}
