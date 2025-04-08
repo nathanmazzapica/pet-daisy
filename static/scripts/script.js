@@ -43,7 +43,7 @@ ws.onmessage = (event) => {
     console.log(data)
 
     if (data.name === "petCounter") {
-        let prettyCount = Number(data.message).toLocaleString()
+        let prettyCount = Number(data.data).toLocaleString()
         counter.textContent = `Daisy has been pet ${prettyCount} times!`
         return;
     }

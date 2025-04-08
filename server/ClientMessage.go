@@ -3,15 +3,15 @@ package server
 import "encoding/json"
 
 type ClientMessage struct {
-	Client  *Client `json:"-"`
-	Name    string  `json:"name"`
-	Message string  `json:"message"`
+	Client *Client `json:"-"`
+	Name   string  `json:"name"`
+	Data   string  `json:"data"`
 }
 
 // Name = type; message = data. Don't feel like refactoring too much rn
 type ServerMessage struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
+	Name string `json:"name"`
+	Data string `json:"message"`
 }
 
 // buildClientMessage converts an incoming slice of raw byte data into a usable ClientMessage
@@ -43,7 +43,7 @@ func (message *ServerMessage) toBytes() []byte {
 func (message *ClientMessage) toServerMessage() ServerMessage {
 	var broadcast ServerMessage
 	broadcast.Name = message.Name
-	broadcast.Message = message.Message
+	broadcast.Data = message.Data
 
 	return broadcast
 }

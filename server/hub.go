@@ -45,7 +45,7 @@ func (h *Hub) run() {
 func (h *Hub) handleIncomingMessage(message ClientMessage) {
 	log.Println("Received message:", message)
 
-	if message.Message == "$!pet" {
+	if message.Data == "$!pet" {
 
 		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
 
