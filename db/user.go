@@ -83,8 +83,6 @@ func FindIDBySyncCode(code string) (string, error) {
 	return userID, nil
 }
 
-// im wondering if a key as param would work better here
-
 // SaveToDB saves a user's pets to DB if they exist, otherwise inserts user into DB
 func (u *User) SaveToDB() error {
 
@@ -149,14 +147,14 @@ func getRandomDisplayName() string {
 		"intellectual", "philosophical", "charged", "empty", "full",
 		"serious", "vengeful", "malignant", "generous", "complacent",
 		"ambitious", "lazy", "dull", "sharp", "splendid", "sexy", "cute",
-		"loving", "hateful", "spiteful", "rude", "polite", "dasterdly"}
+		"loving", "hateful", "spiteful", "rude", "polite", "dasterdly", "depressed"}
 
 	nouns := []string{"Dog", "Watermelon", "Crusader", "Lancer", "Envisage", "Frog",
 		"Beetle", "Cellphone", "Python", "Lizard", "Butterfly", "Dragon",
 		"Automobile", "Cow", "Henry", "Levi", "Array", "Buzzer", "Balloon", "Book",
 		"Calendar", "Burrito", "Corgi", "Pencil", "Pen", "Marker", "Bookshelf",
 		"Sharpener", "Can", "Lightbulb", "Flower", "Daisy", "Eraser", "Battery",
-		"Butter", "Cantaloupe", "Fridge", "Computer", "Programmer", "Kitty"}
+		"Butter", "Cantaloupe", "Fridge", "Computer", "Programmer", "Kitty", "Barbell", "Bottle", "Toad", "Beryllium", "Consumer", "President", "Orange", "Entity"}
 
 	fmt.Printf("%d\n", len(adjectives)*len(nouns)*1_000)
 
