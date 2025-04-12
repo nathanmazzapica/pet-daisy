@@ -17,13 +17,12 @@ func NewUserStore(db *sql.DB) UserStore {
 	return UserStore{DB: db}
 }
 
-func (s *UserStore) CreateUser(*User, error) (*User, error) {
+func (s *UserStore) CreateUser() (*User, error) {
 	user := &User{
 		UserID:      uuid.New().String(),
 		DisplayName: getRandomDisplayName(),
 		SyncCode:    generateSyncCode(),
 		PetCount:    0,
-		exists:      false,
 	}
 
 	if err := s.PersistUser(user); err != nil {
@@ -105,13 +104,16 @@ func (s *UserStore) GetTotalPetCount() (int, error) {
 
 }
 
-func (s *UserStore) UpdateDisplayName(userID, displayName string) error {
+func (s *UserStore) UpdateDisplayName(user *User, displayName string) error {
+	userID := user.UserID
 	_, err := s.DB.Exec("UPDATE users SET display_name = ? WHERE user_id = ?", displayName, userID)
 
 	if err != nil {
 		logger.LogError(err)
 		return err
 	}
+
+	user.DisplayName = displayName
 
 	return nil
 }

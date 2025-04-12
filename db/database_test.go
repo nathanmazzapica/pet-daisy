@@ -2,38 +2,73 @@ package db
 
 import (
 	"database/sql"
-	"github.com/google/uuid"
 	"log"
 	_ "modernc.org/sqlite"
 	"testing"
 )
 
-func TestUser_SaveToDB(t *testing.T) {
+func TestUserStore_CreateUserAndRetrieve(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
 	store := NewUserStore(db)
 
-	testUser := createDummyUser()
-
-	err := store.PersistUser(testUser)
+	created, err := store.CreateUser()
 
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatalf("error creating user: %v", err)
 	}
 
-	userCount, err := store.GetUserCount()
+	id := created.ID()
+	syncCode := created.SyncCode
+
+	retrieved, err := store.GetUserByID(id)
 
 	if err != nil {
-		t.Errorf("error getting user count: %v", err)
-		t.FailNow()
+		t.Fatalf("error getting user by id: %v", err)
 	}
 
-	if userCount != 1 {
-		t.Errorf("User count should be 1, was %d", userCount)
-		t.FailNow()
+	assertUserEquals(t, created, retrieved)
+
+	retrieved, err = store.GetUserBySyncCode(syncCode)
+
+	if err != nil {
+		t.Fatalf("error getting user by sync_code: %v", err)
 	}
+
+	assertUserEquals(t, created, retrieved)
+
+}
+
+func TestUserStore_UpdateDisplayName(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	store := NewUserStore(db)
+
+	created, err := store.CreateUser()
+
+	if err != nil {
+		t.Fatalf("error creating user: %v", err)
+	}
+
+	newName := "updateMeVro"
+	store.UpdateDisplayName(created, newName)
+
+	if created.DisplayName != newName {
+		t.Fatalf("Expected created display name to be updated to %s, got %s", newName, created.DisplayName)
+	}
+
+	retrieved, err := store.GetUserByID(created.ID())
+
+	if err != nil {
+		t.Fatalf("error getting user by id: %v", err)
+	}
+
+	if retrieved.DisplayName != newName {
+		t.Fatalf("Expected retrieved display name to be updated to %s, got %s", newName, retrieved.DisplayName)
+	}
+
 }
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -52,10 +87,17 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func createDummyUser() *User {
-	userID := uuid.New().String()
-	displayName := getRandomDisplayName()
-	newUser := User{UserID: userID, DisplayName: displayName, SyncCode: generateSyncCode(), PetCount: 0, exists: false}
+func assertUserEquals(t *testing.T, want, got *User) {
+	t.Helper()
 
-	return &newUser
+	if want == nil || got == nil {
+		t.Fatalf("One of the users is nil\nWant: %+v\nGot: %+v", want, got)
+	}
+
+	if want.UserID != got.UserID ||
+		want.DisplayName != got.DisplayName ||
+		want.SyncCode != got.SyncCode ||
+		want.PetCount != got.PetCount {
+		t.Errorf("Users are not equal.\nWant: %+v\nGot: %+v", want, got)
+	}
 }
