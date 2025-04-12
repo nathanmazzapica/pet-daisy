@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+// Testing TODO: 1. test (and handle) duplicate sync_code insertions
+
 func TestUserStore_CreateUserAndRetrieve(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
