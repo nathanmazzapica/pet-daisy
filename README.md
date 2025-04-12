@@ -42,6 +42,7 @@ Prior to this project, I would only test code by manually playing around with it
 - Fully testable DB layer
 - Clear requirements documentation
 - Dataflow diagrams & ERDs
+- ZSH scripts for deployment
 
 ## Skills I've Developed
 - Stronger understanding of concurrency
