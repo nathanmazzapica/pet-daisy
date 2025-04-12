@@ -19,10 +19,16 @@ func TestUser_SaveToDB(t *testing.T) {
 	err := store.PersistUser(testUser)
 
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
+		t.FailNow()
 	}
 
-	userCount := store.GetUserCount()
+	userCount, err := store.GetUserCount()
+
+	if err != nil {
+		t.Errorf("error getting user count: %v", err)
+		t.FailNow()
+	}
 
 	if userCount != 1 {
 		t.Errorf("User count should be 1, was %d", userCount)

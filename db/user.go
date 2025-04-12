@@ -17,7 +17,9 @@ type User struct {
 	DisplayName string `field:"display_name"`
 	SyncCode    string `field:"sync_code"`
 	PetCount    int    `field:"pets"`
-	exists      bool
+
+	// Deprecated: whether or not the user exists in the database
+	exists bool
 }
 
 func (u *User) ID() string {
@@ -112,6 +114,9 @@ func (u *User) UpdateDisplayName(name string) {
 		logger.LogError(fmt.Errorf("failed to update user display name: %w", err))
 	}
 }
+
+//////////////////
+// Hey buddy, this shouldn't be here!
 
 // GetUserID retrieves the User ID from the client request's cookie
 func GetUserID(r *http.Request) (string, error) {
