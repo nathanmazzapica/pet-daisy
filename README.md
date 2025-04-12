@@ -4,6 +4,7 @@ Pet Daisy started as a simple WebSocket server to act as a backend for my JavaFX
 
 This README acts as a quick journal for me to look back on and see just how far I've come. I'm writing the first version pretty late at night, so please forgive any grammatical errors. thx.
 
+##### I am currently working on the refactor/server branch
 
 # What I've learned so far
 
