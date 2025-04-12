@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nathanmazzapica/pet-daisy/logger"
-	"math/rand"
 	"net/http"
 )
 
@@ -26,7 +25,7 @@ func (u *User) ID() string {
 	return u.UserID
 }
 
-// CreateNewUser creates a new user and attempts to save them to the database. If this fails the user is still created, and future database saves will try again
+// Deprecated: CreateNewUser creates a new user and attempts to save them to the database. If this fails the user is still created, and future database saves will try again
 func CreateNewUser() *User {
 	userID := uuid.New().String()
 	displayName := getRandomDisplayName()
@@ -43,7 +42,7 @@ func CreateNewUser() *User {
 
 }
 
-// GetUserFromDB retrieves a user from the database as a pointer with the provided userID
+// Deprecated: GetUserFromDB retrieves a user from the database as a pointer with the provided userID
 func GetUserFromDB(userID string) (*User, error) {
 	user := &User{}
 
@@ -70,6 +69,7 @@ func GetUserFromDB(userID string) (*User, error) {
 	return user, nil
 }
 
+// Deprecated
 func FindIDBySyncCode(code string) (string, error) {
 	var userID string
 
@@ -85,7 +85,7 @@ func FindIDBySyncCode(code string) (string, error) {
 	return userID, nil
 }
 
-// SaveToDB saves a user's pets to DB if they exist, otherwise inserts user into DB
+// Deprecated: SaveToDB saves a user's pets to DB if they exist, otherwise inserts user into DB
 func (u *User) SaveToDB() error {
 
 	if DB == nil {
@@ -127,45 +127,4 @@ func GetUserID(r *http.Request) (string, error) {
 	}
 
 	return userID.Value, nil
-}
-
-// getRandomZeroNumber returns a random number padded with 0s
-func getRandomZeroNumber() string {
-	n := rand.Intn(1_000)
-	return fmt.Sprintf("%04d", n)
-}
-
-// generateSyncCode generates a random 6 digit 'syncCode' used for account recovery/syncing
-func generateSyncCode() string {
-	code := make([]byte, 6)
-	for i := range code {
-		code[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(code)
-}
-
-func getRandomDisplayName() string {
-	adjectives := []string{"big", "long", "small", "golden", "yellow", "black",
-		"red", "short", "cunning", "silly", "radical", "sluggish",
-		"speedy", "humorous", "shy", "scared", "brave", "intelligent", "stupid",
-		"orange", "medium", "austere", "gaudy", "ugly", "beautiful", "sexy",
-		"intellectual", "philosophical", "charged", "empty", "full",
-		"serious", "vengeful", "malignant", "generous", "complacent",
-		"ambitious", "lazy", "dull", "sharp", "splendid", "sexy", "cute",
-		"loving", "hateful", "spiteful", "rude", "polite", "dasterdly", "depressed"}
-
-	nouns := []string{"Dog", "Watermelon", "Crusader", "Lancer", "Envisage", "Frog",
-		"Beetle", "Cellphone", "Python", "Lizard", "Butterfly", "Dragon",
-		"Automobile", "Cow", "Henry", "Levi", "Array", "Buzzer", "Balloon", "Book",
-		"Calendar", "Burrito", "Corgi", "Pencil", "Pen", "Marker", "Bookshelf",
-		"Sharpener", "Can", "Lightbulb", "Flower", "Daisy", "Eraser", "Battery",
-		"Butter", "Cantaloupe", "Fridge", "Computer", "Programmer", "Kitty", "Barbell", "Bottle", "Toad", "Beryllium", "Consumer", "President", "Orange", "Entity"}
-
-	fmt.Printf("%d\n", len(adjectives)*len(nouns)*1_000)
-
-	adjI := rand.Intn(len(adjectives))
-	nounI := rand.Intn(len(nouns))
-
-	return adjectives[adjI] + nouns[nounI] + getRandomZeroNumber()
-
 }
