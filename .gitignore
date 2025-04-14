@@ -3,7 +3,6 @@
 *.env
 *.backup
 *.log
-.env
 logs/
 bin/
 .idea/
