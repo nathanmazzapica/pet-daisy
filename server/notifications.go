@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"math/rand"
@@ -57,10 +56,9 @@ func playerCountNotification() ServerMessage {
 	return ServerMessage{"playerCount", playerCount}
 }
 
+// TODO: Implement
 func leaderboardUpdateNotification() ServerMessage {
-	lbData := game.GetTopX(10)
 
 	// optimistic about errors :D
-	data, _ := json.Marshal(lbData)
-	return ServerMessage{"leaderboard", string(data)}
+	return ServerMessage{"leaderboard", "not implemented"}
 }

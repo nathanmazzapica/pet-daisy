@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
-
+	log.Println("serving home page")
 	userIdCookie, err := r.Cookie("user_id_daisy")
 	var userID string
 	var user *db.User

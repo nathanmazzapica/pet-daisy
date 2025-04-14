@@ -74,7 +74,6 @@ func (h *Hub) handleIncomingMessage(message ClientMessage) {
 func (h *Hub) handleClientRegister(client *Client) {
 	h.clients[client] = true
 	h.broadcast <- playerJoinNotification(client.DisplayName())
-	h.broadcast <- playerCountNotification()
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
 }
@@ -83,10 +82,7 @@ func (h *Hub) handleClientUnregister(client *Client) {
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
 		close(client.send)
-		client.user.SaveToDB()
-
 		h.broadcast <- playerLeftNotification(client.user.DisplayName)
-		h.broadcast <- playerCountNotification()
 	}
 }
 

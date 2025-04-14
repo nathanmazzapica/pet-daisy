@@ -9,7 +9,7 @@ import (
 type Server struct {
 	Hub   *Hub
 	Store *db.UserStore
-	mux   *http.ServeMux
+	Mux   *http.ServeMux
 	WsURL string
 }
 
@@ -27,19 +27,19 @@ func (s *Server) Start() {
 
 func (s *Server) InitRoutes() {
 
-	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	s.Mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	//http.HandleFunc("/", ServeBreak)
-	s.mux.HandleFunc("/", s.ServeHome)
-	s.mux.HandleFunc("/sync", s.PostSyncCode)
-	s.mux.HandleFunc("/roadmap", ServeRoadmap)
-	s.mux.HandleFunc("/error", ServeError)
+	s.Mux.HandleFunc("/", s.ServeHome)
+	s.Mux.HandleFunc("/sync", s.PostSyncCode)
+	s.Mux.HandleFunc("/roadmap", ServeRoadmap)
+	s.Mux.HandleFunc("/error", ServeError)
 
-	s.mux.HandleFunc("/ws", s.HandleConnections)
+	s.Mux.HandleFunc("/ws", s.HandleConnections)
 }
 
 func (s *Server) StartHTTPS() error {
-	return http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", s.mux)
+	return http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", s.Mux)
 }
 
 func RedirectHTTP() {

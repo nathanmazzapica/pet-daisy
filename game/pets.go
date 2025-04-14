@@ -6,6 +6,11 @@ import (
 	"sync/atomic"
 )
 
+type GameController struct {
+	PetCount int64
+	store    *db.UserStore
+}
+
 var Counter int64
 
 func InitCounter(store *db.UserStore) {
@@ -20,7 +25,6 @@ func InitCounter(store *db.UserStore) {
 func PetDaisy(user *db.User) {
 	atomic.AddInt64(&Counter, 1)
 	user.PetCount++
-	user.SaveToDB()
 
 	//fmt.Printf("%s pet Daisy! Total pets: %d\n", user.DisplayName, Counter)
 }
