@@ -3,4 +3,5 @@
 *.env
 .env
 logs/
+bin/
 .DS_Store
