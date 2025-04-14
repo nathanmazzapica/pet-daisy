@@ -1,9 +1,15 @@
 package server
 
 import (
+	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
 )
+
+type Server struct {
+	hub   *Hub
+	store *db.UserStore
+}
 
 var hub *Hub
 
