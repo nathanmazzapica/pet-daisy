@@ -24,20 +24,28 @@ func main() {
 	logger.InitLog()
 	defer logger.CloseLog()
 
-	db.Connect()
-	game.InitCounter()
+	dbConn := db.Connect()
+	store := db.NewUserStore(dbConn)
+	game.InitCounter(store)
+
+	hub := server.NewHub()
+	wsServer := server.NewServer(hub, store, "ws://localhost:8080/ws")
+
+	wsServer.Start()
 
 	utils.SendDiscordWebhook("daisy is waking up")
 
 	environment := os.Getenv("ENVIRONMENT")
 	switch environment {
 	case "dev":
-		server.WsUrl = "ws://localhost:8080/ws"
+		wsServer := server.NewServer(hub, store, "ws://localhost:8080/ws")
+		wsServer.Start()
 		err = http.ListenAndServe(":8080", nil)
 		utils.SendDiscordWebhook(err.Error())
 		log.Fatal(err)
 	case "prod":
-		server.WsUrl = "wss://pethenry.com/ws"
+		wsServer := server.NewServer(hub, store, "wss://pethenry.com/ws")
+		wsServer.Start()
 		go server.RedirectHTTP()
 		err = server.StartHTTPS()
 		utils.SendDiscordWebhook(err.Error())

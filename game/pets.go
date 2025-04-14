@@ -1,17 +1,20 @@
 package game
 
 import (
-	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/db"
+	"log"
 	"sync/atomic"
 )
 
 var Counter int64
 
-func InitCounter() {
-	result := db.DB.QueryRow("SELECT SUM(pets) FROM users")
-	result.Scan(&Counter)
-	fmt.Println("Init Counter:", Counter)
+func InitCounter(store *db.UserStore) {
+	res, err := store.GetTotalPetCount()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	Counter = int64(res)
 }
 
 func PetDaisy(user *db.User) {

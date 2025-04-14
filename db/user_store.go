@@ -25,8 +25,8 @@ type UserStoreInterface interface {
 	UpdateDisplayName(user *User, displayName string) error
 }
 
-func NewUserStore(db *sql.DB) UserStore {
-	return UserStore{DB: db}
+func NewUserStore(db *sql.DB) *UserStore {
+	return &UserStore{DB: db}
 }
 
 func (s *UserStore) CreateUser() (*User, error) {
