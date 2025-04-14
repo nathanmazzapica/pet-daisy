@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"log"
 	"math/rand"
@@ -132,14 +131,14 @@ func (s *UserStore) UpdateDisplayName(user *User, displayName string) error {
 	return nil
 }
 
-func (s *UserStore) GetTopPlayers() []game.LeaderboardRowData {
-	var topUsers []game.LeaderboardRowData
+func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
+	var topUsers []LeaderboardRowData
 
 	rows, err := s.DB.Query("SELECT user_id, display_name, pets FROM users ORDER BY pets DESC LIMIT 10")
 
 	if err != nil {
 		log.Println("Error getting top players:", err)
-		return []game.LeaderboardRowData{}
+		return []LeaderboardRowData{}
 	}
 
 	position := 1
@@ -147,7 +146,7 @@ func (s *UserStore) GetTopPlayers() []game.LeaderboardRowData {
 		user := &User{}
 		rows.Scan(&user.UserID, &user.DisplayName, &user.PetCount)
 
-		topUsers = append(topUsers, game.UserToLeaderboardRowData(*user, position))
+		topUsers = append(topUsers, UserToLeaderboardRowData(*user, position))
 	}
 
 	return topUsers

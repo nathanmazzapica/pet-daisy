@@ -1,8 +1,4 @@
-package game
-
-import (
-	"github.com/nathanmazzapica/pet-daisy/db"
-)
+package db
 
 type LeaderboardRowData struct {
 	DisplayName string `json:"display_name"`
@@ -10,7 +6,7 @@ type LeaderboardRowData struct {
 	Position    int    `json:"position"`
 }
 
-func UserToLeaderboardRowData(user db.User, position int) LeaderboardRowData {
+func UserToLeaderboardRowData(user User, position int) LeaderboardRowData {
 	return LeaderboardRowData{
 		DisplayName: user.DisplayName,
 		PetCount:    user.PetCount,
