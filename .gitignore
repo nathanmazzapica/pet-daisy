@@ -1,7 +1,10 @@
 /data.db
 *.sh
 *.env
+*.backup
+*.log
 .env
 logs/
 bin/
+.idea/
 .DS_Store
