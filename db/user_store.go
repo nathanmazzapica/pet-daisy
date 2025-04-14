@@ -13,6 +13,18 @@ type UserStore struct {
 	DB *sql.DB
 }
 
+// UserStoreInterface exists for future purposes and is currently redundant. I plan to eventually move to MySQL and will create a different UserStore type for it that implements this interface.
+type UserStoreInterface interface {
+	CreateUser() (*User, error)
+	PersistUser(*User) error
+	SaveUserScore(*User) error
+	GetUserCount() (int, error)
+	GetUserById(id string) (*User, error)
+	GetUserBySyncCode(syncCode string) (*User, error)
+	GetTotalPetCount() (int, error)
+	UpdateDisplayName(user *User, displayName string) error
+}
+
 func NewUserStore(db *sql.DB) UserStore {
 	return UserStore{DB: db}
 }
