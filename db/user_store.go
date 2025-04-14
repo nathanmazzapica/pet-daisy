@@ -13,6 +13,17 @@ type UserStore struct {
 	DB *sql.DB
 }
 
+type UserStoreInterface interface {
+	CreateUser() (*User, error)
+	PersistUser(*User) error
+	SaveUserScore(*User) error
+	GetUserCount() (int, error)
+	GetUserById(id string) (*User, error)
+	GetUserBySyncCode(syncCode string) (*User, error)
+	GetTotalPetCount() (int, error)
+	UpdateDisplayName(user *User, displayName string) error
+}
+
 func NewUserStore(db *sql.DB) UserStore {
 	return UserStore{DB: db}
 }
