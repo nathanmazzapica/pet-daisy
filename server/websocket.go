@@ -104,7 +104,7 @@ func handlePet(client *Client) {
 
 	client.sessionPets++
 
-	game.PetDaisy(&client.user)
+	//game.PetDaisy(&client.user)
 	client.lastPetTime = time.Now()
 }
 

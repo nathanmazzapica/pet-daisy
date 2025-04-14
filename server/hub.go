@@ -61,9 +61,9 @@ func (h *Hub) handleIncomingMessage(message ClientMessage) {
 			h.broadcast <- newAchievmentNotification(message.Client.DisplayName(), count)
 		}
 
-		if game.CheckMilestone() {
-			h.broadcast <- newMilestoneNotification()
-		}
+		//if game.CheckMilestone() {
+		//	h.broadcast <- newMilestoneNotification()
+		//}
 
 		return
 	}
