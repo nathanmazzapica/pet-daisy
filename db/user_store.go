@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
+	"log"
 	"math/rand"
 )
 
@@ -25,8 +27,8 @@ type UserStoreInterface interface {
 	UpdateDisplayName(user *User, displayName string) error
 }
 
-func NewUserStore(db *sql.DB) *UserStore {
-	return &UserStore{DB: db}
+func NewUserStore(db *sql.DB) UserStore {
+	return UserStore{DB: db}
 }
 
 func (s *UserStore) CreateUser() (*User, error) {
@@ -128,6 +130,27 @@ func (s *UserStore) UpdateDisplayName(user *User, displayName string) error {
 	user.DisplayName = displayName
 
 	return nil
+}
+
+func (s *UserStore) GetTopPlayers() []game.LeaderboardRowData {
+	var topUsers []game.LeaderboardRowData
+
+	rows, err := s.DB.Query("SELECT user_id, display_name, pets FROM users ORDER BY pets DESC LIMIT 10")
+
+	if err != nil {
+		log.Println("Error getting top players:", err)
+		return []game.LeaderboardRowData{}
+	}
+
+	position := 1
+	for rows.Next() {
+		user := &User{}
+		rows.Scan(&user.UserID, &user.DisplayName, &user.PetCount)
+
+		topUsers = append(topUsers, game.UserToLeaderboardRowData(*user, position))
+	}
+
+	return topUsers
 }
 
 // generateSyncCode generates a random 6 digit 'syncCode' used for account recovery/syncing
