@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/nathanmazzapica/pet-daisy/db"
+	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
 )
@@ -9,14 +10,15 @@ import (
 type Server struct {
 	Hub   *Hub
 	Store *db.UserStore
+	Game  *game.Controller
 	Mux   *http.ServeMux
 	WsURL string
 }
 
 var hub *Hub
 
-func NewServer(hub *Hub, store *db.UserStore, url string) *Server {
-	return &Server{hub, store, http.NewServeMux(), url}
+func NewServer(hub *Hub, store *db.UserStore, controller *game.Controller, url string) *Server {
+	return &Server{hub, store, controller, http.NewServeMux(), url}
 }
 
 func (s *Server) Start() {

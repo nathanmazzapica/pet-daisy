@@ -26,25 +26,23 @@ func main() {
 
 	dbConn := db.Connect()
 	store := db.NewUserStore(dbConn)
-	game.InitCounter(&store)
+
+	gameController := game.NewController(&store)
 
 	hub := server.NewHub()
-	wsServer := server.NewServer(hub, &store, "ws://localhost:8080/ws")
-
-	wsServer.Start()
 
 	utils.SendDiscordWebhook("daisy is waking up")
 
 	environment := os.Getenv("ENVIRONMENT")
 	switch environment {
 	case "dev":
-		wsServer := server.NewServer(hub, &store, "ws://localhost:8080/ws")
+		wsServer := server.NewServer(hub, &store, gameController, "ws://localhost:8080/ws")
 		wsServer.Start()
 		err = http.ListenAndServe(":8080", wsServer.Mux)
 		utils.SendDiscordWebhook(err.Error())
 		log.Fatal(err)
 	case "prod":
-		wsServer := server.NewServer(hub, &store, "wss://pethenry.com/ws")
+		wsServer := server.NewServer(hub, &store, gameController, "wss://pethenry.com/ws")
 		wsServer.Start()
 		go server.RedirectHTTP()
 		err = server.StartHTTPS()
@@ -54,8 +52,4 @@ func main() {
 		fmt.Println("Invalid environment configuration")
 		return
 	}
-
-	utils.SendDiscordWebhook("Daisy is going to sleep")
-	log.Println("[SHUTDOWN] Something caused an unexpected shutdown")
-
 }

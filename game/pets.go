@@ -6,33 +6,39 @@ import (
 	"sync/atomic"
 )
 
-type GameController struct {
+type Controller struct {
+	Store    *db.UserStore
 	PetCount int64
-	store    *db.UserStore
 }
 
 var Counter int64
 
-func InitCounter(store *db.UserStore) {
-	res, err := store.GetTotalPetCount()
+func NewController(store *db.UserStore) *Controller {
+	controller := &Controller{store, 0}
+	controller.InitCounter()
+
+	return controller
+}
+
+func (c *Controller) InitCounter() {
+	res, err := c.Store.GetTotalPetCount()
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	Counter = int64(res)
+	c.PetCount = int64(res)
 }
 
-func PetDaisy(user *db.User) {
-	atomic.AddInt64(&Counter, 1)
+func (c *Controller) PetDaisy(user *db.User) {
+	atomic.AddInt64(&c.PetCount, 1)
 	user.PetCount++
-
-	//fmt.Printf("%s pet Daisy! Total pets: %d\n", user.DisplayName, Counter)
 }
 
 func CheckPersonalMilestone(count int) bool {
 	return count == 10 || count == 25 || count == 50 || count == 100 || count%1000 == 0
 }
 
-func CheckMilestone() bool {
-	return Counter%25_000 == 0
+func (c *Controller) CheckMilestone() bool {
+	return c.PetCount%25_000 == 0
 }
