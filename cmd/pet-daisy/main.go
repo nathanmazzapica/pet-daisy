@@ -27,8 +27,6 @@ func main() {
 	db.Connect()
 	game.InitCounter()
 
-	server.InitRoutes()
-
 	utils.SendDiscordWebhook("daisy is waking up")
 
 	environment := os.Getenv("ENVIRONMENT")

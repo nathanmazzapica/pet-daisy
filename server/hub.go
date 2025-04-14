@@ -18,7 +18,7 @@ type Hub struct {
 	unregister chan *Client
 }
 
-func newHub() *Hub {
+func NewHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan ServerMessage),
 		receive:    make(chan ClientMessage),

@@ -8,25 +8,30 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"html/template"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var WsUrl string
-var activeEvent string
+func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 
-func ServeHome(w http.ResponseWriter, r *http.Request) {
-
-	user_id, err := r.Cookie("user_id_daisy")
+	userIdCookie, err := r.Cookie("user_id_daisy")
 	var userID string
 	var user *db.User
 
 	if err != nil {
 		switch {
+		// I want to make this its own func at some point
 		case errors.Is(err, http.ErrNoCookie):
 
-			user = db.CreateNewUser()
+			user, err = s.Store.CreateUser()
+
+			if err != nil {
+				log.Println("Error creating user:", err)
+				return
+			}
+
 			fmt.Println("hello,", user.DisplayName)
 			fmt.Println("newID:", user.UserID)
 
@@ -47,16 +52,14 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		default:
 			logger.LogError(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
-			// todo: make funny error html page
 			return
 		}
 	} else {
-		userID = user_id.Value
-		user, err = db.GetUserFromDB(userID)
+		userID = userIdCookie.Value
+		user, err = s.Store.GetUserByID(userID)
 		if err != nil {
 			logger.LogError(err)
 		}
-
 	}
 
 	fmt.Printf("USER: {%s} CONNECTED\n", user.DisplayName)
@@ -68,14 +71,12 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		UserPets  int
 		TotalPets int64
 		WS_URL    string
-		Event     string
 	}{
 		User:      user.DisplayName,
 		SyncCode:  user.SyncCode,
 		UserPets:  user.PetCount,
 		TotalPets: game.Counter,
-		WS_URL:    WsUrl,
-		Event:     activeEvent,
+		WS_URL:    s.WsURL,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
@@ -88,7 +89,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func PostSyncCode(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PostSyncCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -103,12 +104,14 @@ func PostSyncCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := db.FindIDBySyncCode(data.Code)
+	user, err := s.Store.GetUserBySyncCode(data.Code)
 
 	if err != nil {
 		fmt.Println("Error recovering user:", err)
 		return
 	}
+
+	userID := user.UserID
 
 	domain := ""
 
@@ -130,7 +133,7 @@ func PostSyncCode(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})
 }
 
-func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
+func ServeRoadmap(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/roadmap.html"))
 	err := tmpl.Execute(w, nil)
 
@@ -139,7 +142,7 @@ func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ServeBreak(w http.ResponseWriter, r *http.Request) {
+func ServeBreak(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/break.html"))
 	err := tmpl.Execute(w, nil)
 

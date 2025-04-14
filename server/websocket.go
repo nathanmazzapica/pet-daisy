@@ -38,14 +38,14 @@ type PetEvent struct {
 }
 
 // HandleConnections upgrades HTTP to WebSocket and manages clients
-func HandleConnections(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	userID, err := db.GetUserID(r)
 	if err != nil {
 		logger.ErrLog.Println("Could not retrieve user ID:", err)
 		return
 	}
 
-	user, err := db.GetUserFromDB(userID)
+	user, err := s.Store.GetUserByID(userID)
 	if err != nil {
 		logger.ErrLog.Println(err)
 		return
@@ -58,7 +58,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{conn: conn, id: userID, user: *user, hub: hub, send: make(chan ServerMessage, 256)}
+	client := &Client{conn: conn, id: userID, user: *user, hub: s.Hub, send: make(chan ServerMessage, 256)}
 
 	client.hub.register <- client
 
@@ -70,7 +70,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
-// handlePet increments the pet count safely
+// handlePet checks for cheating and increments the pet count
 func handlePet(client *Client) {
 	petTimeIdx := client.sessionPets % PET_WINDOW
 
@@ -118,12 +118,12 @@ func kickCheater(client *Client, penalty int) {
 	client.conn.Close()
 }
 
-func autoSave() {
+func (s *Server) autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
 		mu.RLock()
 		for client := range clients {
-			if err := client.user.SaveToDB(); err != nil {
+			if err := s.Store.SaveUserScore(&client.user); err != nil {
 				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
 				logger.ErrLog.Println(errStr)
 				continue
