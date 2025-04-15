@@ -8,7 +8,6 @@ type ClientMessage struct {
 	Data   string  `json:"data"`
 }
 
-// Name = type; message = data. Don't feel like refactoring too much rn
 type ServerMessage struct {
 	Name string `json:"name"`
 	Data string `json:"data"`

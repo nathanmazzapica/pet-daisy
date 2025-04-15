@@ -1,7 +1,9 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"math/rand"
 	"strconv"
@@ -51,9 +53,14 @@ func playerLeftNotification(user string) ServerMessage {
 	return ServerMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
 }
 
-// TODO: Implement
-func leaderboardUpdateNotification() ServerMessage {
+func playerCountNotification(count int) ServerMessage {
+	return ServerMessage{"playerCount", strconv.Itoa(count)}
+}
 
-	// optimistic about errors :D
-	return ServerMessage{"leaderboard", "not implemented"}
+// TODO: Implement
+func leaderboardUpdateNotification(data []db.LeaderboardRowData) ServerMessage {
+
+	jsonData, _ := json.Marshal(data)
+
+	return ServerMessage{"leaderboard", string(jsonData)}
 }
