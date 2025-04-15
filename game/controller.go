@@ -30,9 +30,8 @@ func (c *Controller) InitCounter() {
 	c.PetCount = int64(res)
 }
 
-func (c *Controller) PetDaisy(user *db.User) {
+func (c *Controller) PetDaisy() {
 	atomic.AddInt64(&c.PetCount, 1)
-	user.PetCount++
 }
 
 func CheckPersonalMilestone(count int) bool {

@@ -28,8 +28,9 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
 
-		handlePet(message.Client)
-		s.Game.PetCount++
+		s.Game.PetDaisy()
+		message.Client.user.PetCount++
+		s.store.SaveUserScore(&message.Client.user)
 		s.out <- ServerMessage{
 			Name: "petCounter",
 			Data: strconv.Itoa(int(s.Game.PetCount)),
