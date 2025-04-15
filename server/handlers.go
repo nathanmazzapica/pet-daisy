@@ -25,7 +25,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		// I want to make this its own func at some point
 		case errors.Is(err, http.ErrNoCookie):
 
-			user, err = s.Store.CreateUser()
+			user, err = s.store.CreateUser()
 
 			if err != nil {
 				log.Println("Error creating user:", err)
@@ -56,7 +56,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		userID = userIdCookie.Value
-		user, err = s.Store.GetUserByID(userID)
+		user, err = s.store.GetUserByID(userID)
 		if err != nil {
 			logger.LogError(err)
 		}
@@ -104,7 +104,7 @@ func (s *Server) PostSyncCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.Store.GetUserBySyncCode(data.Code)
+	user, err := s.store.GetUserBySyncCode(data.Code)
 
 	if err != nil {
 		fmt.Println("Error recovering user:", err)

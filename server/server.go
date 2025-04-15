@@ -9,7 +9,7 @@ import (
 
 type Server struct {
 	Hub   *Hub
-	Store *db.UserStore
+	store *db.UserStore
 	Game  *game.Controller
 	Mux   *http.ServeMux
 	WsURL string

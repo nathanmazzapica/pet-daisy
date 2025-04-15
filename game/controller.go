@@ -7,7 +7,7 @@ import (
 )
 
 type Controller struct {
-	Store    *db.UserStore
+	store    *db.UserStore
 	PetCount int64
 }
 
@@ -21,7 +21,7 @@ func NewController(store *db.UserStore) *Controller {
 }
 
 func (c *Controller) InitCounter() {
-	res, err := c.Store.GetTotalPetCount()
+	res, err := c.store.GetTotalPetCount()
 
 	if err != nil {
 		log.Fatal(err)

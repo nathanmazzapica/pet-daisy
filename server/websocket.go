@@ -45,7 +45,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.Store.GetUserByID(userID)
+	user, err := s.store.GetUserByID(userID)
 	if err != nil {
 		logger.ErrLog.Println(err)
 		return
@@ -123,7 +123,7 @@ func (s *Server) autoSave() {
 		time.Sleep(3 * time.Minute)
 		mu.RLock()
 		for client := range clients {
-			if err := s.Store.SaveUserScore(&client.user); err != nil {
+			if err := s.store.SaveUserScore(&client.user); err != nil {
 				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
 				logger.ErrLog.Println(errStr)
 				continue
