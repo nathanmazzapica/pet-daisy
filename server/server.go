@@ -9,7 +9,7 @@ import (
 
 type Server struct {
 	store *db.UserStore
-	Game  *game.Controller
+	Game  *game.Service
 	Mux   *http.ServeMux
 	WsURL string
 
@@ -21,7 +21,7 @@ type Server struct {
 	unregister chan *Client
 }
 
-func NewServer(store *db.UserStore, game *game.Controller, url string) *Server {
+func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 	return &Server{
 		store:      store,
 		Game:       game,

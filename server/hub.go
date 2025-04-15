@@ -37,7 +37,7 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 		}
 
 		if shouldUpdateLeaderboard() {
-			s.out <- leaderboardUpdateNotification()
+			s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 		}
 
 		count := message.Client.user.PetCount

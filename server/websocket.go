@@ -24,9 +24,6 @@ const (
 )
 
 var (
-	// Set of clients
-	clients = make(map[*Client]bool)
-
 	mu                    sync.RWMutex
 	lastLeaderboardUpdate = int64(0)
 )
@@ -62,7 +59,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	client.hub.register <- client
 
-	client.hub.out <- leaderboardUpdateNotification()
+	client.hub.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 
 	fmt.Println("Client connected.")
 
@@ -122,7 +119,7 @@ func (s *Server) autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
 		mu.RLock()
-		for client := range clients {
+		for client := range s.clients {
 			if err := s.store.SaveUserScore(&client.user); err != nil {
 				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
 				logger.ErrLog.Println(errStr)
@@ -135,8 +132,8 @@ func (s *Server) autoSave() {
 	}
 }
 
-func getDelay() int64 {
-	delay := int64(150*len(clients)) / 2
+func (s *Server) getDelay() int64 {
+	delay := int64(150*len(s.clients)) / 2
 
 	if delay > 1000 {
 		return 1000
@@ -145,9 +142,9 @@ func getDelay() int64 {
 	return delay
 }
 
-func shouldUpdateLeaderboard() bool {
+func (s *Server) shouldUpdateLeaderboard() bool {
 	now := time.Now().UnixMilli()
-	if now > lastLeaderboardUpdate+getDelay() {
+	if now > lastLeaderboardUpdate+s.getDelay() {
 		lastLeaderboardUpdate = now
 		return true
 	}
