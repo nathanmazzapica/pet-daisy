@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/db"
-	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"html/template"
 	"log"
@@ -75,7 +74,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		User:      user.DisplayName,
 		SyncCode:  user.SyncCode,
 		UserPets:  user.PetCount,
-		TotalPets: game.Counter,
+		TotalPets: s.Game.PetCount,
 		WS_URL:    s.WsURL,
 	}
 

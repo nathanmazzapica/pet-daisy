@@ -29,20 +29,26 @@ func main() {
 
 	gameController := game.NewController(&store)
 
-	hub := server.NewHub()
-
 	utils.SendDiscordWebhook("daisy is waking up")
 
 	environment := os.Getenv("ENVIRONMENT")
 	switch environment {
 	case "dev":
-		wsServer := server.NewServer(hub, &store, gameController, "ws://localhost:8080/ws")
+		wsServer := server.NewServer(
+			&store,
+			gameController,
+			"ws://localhost:8080/ws",
+		)
 		wsServer.Start()
 		err = http.ListenAndServe(":8080", wsServer.Mux)
 		utils.SendDiscordWebhook(err.Error())
 		log.Fatal(err)
 	case "prod":
-		wsServer := server.NewServer(hub, &store, gameController, "wss://pethenry.com/ws")
+		wsServer := server.NewServer(
+			&store,
+			gameController,
+			"wss://pethenry.com/ws",
+		)
 		wsServer.Start()
 		go server.RedirectHTTP()
 		err = server.StartHTTPS()

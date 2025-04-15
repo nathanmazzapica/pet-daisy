@@ -51,11 +51,6 @@ func playerLeftNotification(user string) ServerMessage {
 	return ServerMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
 }
 
-func playerCountNotification() ServerMessage {
-	playerCount := strconv.Itoa(len(hub.clients))
-	return ServerMessage{"playerCount", playerCount}
-}
-
 // TODO: Implement
 func leaderboardUpdateNotification() ServerMessage {
 

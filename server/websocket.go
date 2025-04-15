@@ -58,11 +58,11 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{conn: conn, id: userID, user: *user, hub: s.Hub, send: make(chan ServerMessage, 256)}
+	client := &Client{conn: conn, id: userID, user: *user, hub: s, send: make(chan ServerMessage, 256)}
 
 	client.hub.register <- client
 
-	client.hub.broadcast <- leaderboardUpdateNotification()
+	client.hub.out <- leaderboardUpdateNotification()
 
 	fmt.Println("Client connected.")
 

@@ -8,22 +8,36 @@ import (
 )
 
 type Server struct {
-	Hub   *Hub
 	store *db.UserStore
 	Game  *game.Controller
 	Mux   *http.ServeMux
 	WsURL string
+
+	in  chan ClientMessage
+	out chan ServerMessage
+
+	clients    map[*Client]bool
+	register   chan *Client
+	unregister chan *Client
 }
 
-var hub *Hub
-
-func NewServer(hub *Hub, store *db.UserStore, controller *game.Controller, url string) *Server {
-	return &Server{hub, store, controller, http.NewServeMux(), url}
+func NewServer(store *db.UserStore, game *game.Controller, url string) *Server {
+	return &Server{
+		store:      store,
+		Game:       game,
+		Mux:        http.NewServeMux(),
+		WsURL:      url,
+		in:         make(chan ClientMessage),
+		out:        make(chan ServerMessage),
+		clients:    make(map[*Client]bool),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+	}
 }
 
 func (s *Server) Start() {
 	s.InitRoutes()
-	go s.Hub.run()
+	go s.run()
 	go s.autoSave()
 }
 

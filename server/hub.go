@@ -4,45 +4,24 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
+	"strconv"
 )
 
-type Hub struct {
-	clients map[*Client]bool
-
-	receive chan ClientMessage
-
-	broadcast chan ServerMessage
-
-	register chan *Client
-
-	unregister chan *Client
-}
-
-func NewHub() *Hub {
-	return &Hub{
-		broadcast:  make(chan ServerMessage),
-		receive:    make(chan ClientMessage),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
-	}
-}
-
-func (h *Hub) run() {
-	go h.broadcastMessages()
+func (s *Server) run() {
+	go s.broadcastMessages()
 	for {
 		select {
-		case client := <-h.register:
-			h.handleClientRegister(client)
-		case client := <-h.unregister:
-			h.handleClientUnregister(client)
-		case message := <-h.receive:
-			h.handleIncomingMessage(message)
+		case client := <-s.register:
+			s.handleClientRegister(client)
+		case client := <-s.unregister:
+			s.handleClientUnregister(client)
+		case message := <-s.in:
+			s.handleIncomingMessage(message)
 		}
 	}
 }
 
-func (h *Hub) handleIncomingMessage(message ClientMessage) {
+func (s *Server) handleIncomingMessage(message ClientMessage) {
 	log.Println("Received message:", message)
 
 	if message.Data == "$!pet" {
@@ -50,52 +29,57 @@ func (h *Hub) handleIncomingMessage(message ClientMessage) {
 		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
 
 		handlePet(message.Client)
-		h.broadcast <- newPetNotification()
+		s.Game.PetCount++
+		s.out <- ServerMessage{
+			Name: "petCounter",
+			Data: strconv.Itoa(int(s.Game.PetCount)),
+		}
 
 		if shouldUpdateLeaderboard() {
-			h.broadcast <- leaderboardUpdateNotification()
+			s.out <- leaderboardUpdateNotification()
 		}
 
 		count := message.Client.user.PetCount
 		if game.CheckPersonalMilestone(count) {
-			h.broadcast <- newAchievmentNotification(message.Client.DisplayName(), count)
+			s.out <- newAchievmentNotification(message.Client.DisplayName(), count)
 		}
 
 		//if game.CheckMilestone() {
-		//	h.broadcast <- newMilestoneNotification()
+		//	s.out <- newMilestoneNotification()
 		//}
 
 		return
 	}
 
-	h.broadcast <- message.toServerMessage()
+	s.out <- message.toServerMessage()
 }
 
-func (h *Hub) handleClientRegister(client *Client) {
-	h.clients[client] = true
-	h.broadcast <- playerJoinNotification(client.DisplayName())
+func (s *Server) handleClientRegister(client *Client) {
+	s.clients[client] = true
+	s.out <- playerJoinNotification(client.DisplayName())
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
 }
 
-func (h *Hub) handleClientUnregister(client *Client) {
-	if _, ok := h.clients[client]; ok {
-		delete(h.clients, client)
+func (s *Server) handleClientUnregister(client *Client) {
+	if _, ok := s.clients[client]; ok {
+		delete(s.clients, client)
 		close(client.send)
-		h.broadcast <- playerLeftNotification(client.user.DisplayName)
+		s.out <- playerLeftNotification(client.user.DisplayName)
 	}
 }
 
-func (h *Hub) broadcastMessages() {
+func (s *Server) broadcastMessages() {
 	for {
-		message := <-h.broadcast
+		message := <-s.out
+		log.Println("Broadcasting message:", message)
 
-		for client := range h.clients {
+		for client := range s.clients {
 			select {
 			case client.send <- message:
 			default:
 				close(client.send)
-				delete(h.clients, client)
+				delete(s.clients, client)
 			}
 		}
 	}

@@ -20,7 +20,7 @@ type Client struct {
 	sessionPets int
 	mutex       sync.Mutex
 
-	hub  *Hub
+	hub  *Server
 	send chan ServerMessage
 }
 
@@ -57,7 +57,7 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		c.hub.receive <- message
+		c.hub.in <- message
 	}
 }
 
