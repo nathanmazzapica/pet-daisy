@@ -69,6 +69,6 @@ func (s *Service) Autosave() {
 				continue
 			}
 		}
+		s.mu.RUnlock()
 	}
-	s.mu.RUnlock()
 }

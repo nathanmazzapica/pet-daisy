@@ -32,6 +32,8 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.Game.UserCache[userID] = user
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {

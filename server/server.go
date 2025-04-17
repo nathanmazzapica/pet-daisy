@@ -42,7 +42,7 @@ func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 func (s *Server) Start() {
 	s.InitRoutes()
 	go s.run()
-	go s.autoSave()
+	go s.Game.Autosave()
 }
 
 func (s *Server) InitRoutes() {
