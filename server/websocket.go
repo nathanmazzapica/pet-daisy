@@ -5,7 +5,6 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -24,15 +23,8 @@ const (
 )
 
 var (
-	mu                    sync.RWMutex
 	lastLeaderboardUpdate = int64(0)
 )
-
-// PetEvent is unused
-type PetEvent struct {
-	User  *db.User
-	Count int
-}
 
 // HandleConnections upgrades HTTP to WebSocket and manages clients
 func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +52,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	client.hub.register <- client
 
 	client.hub.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
+	client.hub.out <- playerCountNotification(len(s.clients))
 
 	fmt.Println("Client connected.")
 
@@ -118,7 +111,7 @@ func kickCheater(client *Client, penalty int) {
 func (s *Server) autoSave() {
 	for {
 		time.Sleep(3 * time.Minute)
-		mu.RLock()
+		s.mu.RLock()
 		for client := range s.clients {
 			if err := s.store.SaveUserScore(&client.user); err != nil {
 				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
@@ -127,7 +120,7 @@ func (s *Server) autoSave() {
 			}
 			fmt.Printf("Saved user %s to db\n", client.user.DisplayName)
 		}
-		mu.RUnlock()
+		s.mu.RUnlock()
 		fmt.Println("Autosave complete.")
 	}
 }

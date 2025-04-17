@@ -36,7 +36,7 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 			Data: strconv.Itoa(int(s.Game.PetCount)),
 		}
 
-		if shouldUpdateLeaderboard() {
+		if s.shouldUpdateLeaderboard() {
 			s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 		}
 
@@ -58,6 +58,7 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 func (s *Server) handleClientRegister(client *Client) {
 	s.clients[client] = true
 	s.out <- playerJoinNotification(client.DisplayName())
+	s.out <- playerCountNotification(len(s.clients))
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
 }
@@ -67,6 +68,7 @@ func (s *Server) handleClientUnregister(client *Client) {
 		delete(s.clients, client)
 		close(client.send)
 		s.out <- playerLeftNotification(client.user.DisplayName)
+		s.out <- playerCountNotification(len(s.clients))
 	}
 }
 

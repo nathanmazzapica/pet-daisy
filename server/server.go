@@ -5,11 +5,13 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
+	"sync"
 )
 
 type Server struct {
 	store *db.UserStore
 	Game  *game.Service
+
 	Mux   *http.ServeMux
 	WsURL string
 
@@ -19,6 +21,7 @@ type Server struct {
 	clients    map[*Client]bool
 	register   chan *Client
 	unregister chan *Client
+	mu         sync.RWMutex
 }
 
 func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
@@ -32,6 +35,7 @@ func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		mu:         sync.RWMutex{},
 	}
 }
 

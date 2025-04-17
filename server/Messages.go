@@ -26,18 +26,6 @@ func buildClientMessage(rawData []byte, client *Client) (ClientMessage, error) {
 	return message, nil
 }
 
-// Deprecated: toBytes converts a ClientMessage to a slice of bytes.
-func (message *ClientMessage) toBytes() []byte {
-	data, _ := json.Marshal(message)
-	return data
-}
-
-// Deprecated: toBytes converts a ServerMessage to a slice of bytes.
-func (message *ServerMessage) toBytes() []byte {
-	data, _ := json.Marshal(message)
-	return data
-}
-
 // toServerMessage converts a ClientMessage into a ServerMessage.
 func (message *ClientMessage) toServerMessage() ServerMessage {
 	var broadcast ServerMessage
