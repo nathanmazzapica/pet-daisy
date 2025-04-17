@@ -4,18 +4,11 @@ import (
 	"fmt"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/utils"
-	"net/http"
 	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
 	_ "net/http/pprof"
 )
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
 
 const (
 	PET_WINDOW    = 25
@@ -25,40 +18,6 @@ const (
 var (
 	lastLeaderboardUpdate = int64(0)
 )
-
-// HandleConnections upgrades HTTP to WebSocket and manages clients
-func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
-	userID, err := db.GetUserID(r)
-	if err != nil {
-		logger.ErrLog.Println("Could not retrieve user ID:", err)
-		return
-	}
-
-	user, err := s.store.GetUserByID(userID)
-	if err != nil {
-		logger.ErrLog.Println(err)
-		return
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-
-	if err != nil {
-		logger.ErrLog.Println(err)
-		return
-	}
-
-	client := &Client{conn: conn, id: userID, user: *user, hub: s, send: make(chan ServerMessage, 256)}
-
-	client.hub.register <- client
-
-	client.hub.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
-	client.hub.out <- playerCountNotification(len(s.clients))
-
-	fmt.Println("Client connected.")
-
-	go client.writePump()
-	go client.readPump()
-}
 
 // handlePet checks for cheating and increments the pet count
 func handlePet(client *Client) {

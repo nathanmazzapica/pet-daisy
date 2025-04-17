@@ -12,7 +12,6 @@ import (
 // Client represents a WebSocket connection
 type Client struct {
 	conn        *websocket.Conn
-	id          string
 	user        db.User
 	lastPetTime time.Time
 	susPets     int
@@ -30,6 +29,17 @@ const (
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 4096
 )
+
+func (s *Server) newClient(conn *websocket.Conn, user db.User) *Client {
+	client := &Client{
+		conn: conn,
+		user: user,
+		hub:  s,
+		send: make(chan ServerMessage, 256),
+	}
+
+	return client
+}
 
 func (c *Client) readPump() {
 	defer func() {

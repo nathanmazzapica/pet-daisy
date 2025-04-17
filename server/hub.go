@@ -57,8 +57,11 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 func (s *Server) handleClientRegister(client *Client) {
 	s.clients[client] = true
+
 	s.out <- playerJoinNotification(client.DisplayName())
 	s.out <- playerCountNotification(len(s.clients))
+	s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
+
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
 }

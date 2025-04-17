@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"html/template"
@@ -12,6 +13,41 @@ import (
 	"strings"
 	"time"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+// ServeWebsocket upgrades HTTP to WebSocket and manages clients
+func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
+	userID, err := db.GetUserID(r)
+	if err != nil {
+		logger.ErrLog.Println("Could not retrieve user ID:", err)
+		return
+	}
+
+	user, err := s.store.GetUserByID(userID)
+	if err != nil {
+		logger.ErrLog.Println(err)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		logger.ErrLog.Println(err)
+		return
+	}
+
+	client := s.newClient(conn, *user)
+
+	client.hub.register <- client
+
+	fmt.Println("Client connected.")
+
+	go client.writePump()
+	go client.readPump()
+}
 
 func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 	log.Println("serving home page")
@@ -34,20 +70,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("hello,", user.DisplayName)
 			fmt.Println("newID:", user.UserID)
 
-			domain := ""
-
-			if strings.Contains(r.Host, "pethenry.com") {
-				domain = ".pethenry.com"
-			}
-
-			cookie := http.Cookie{
-				Name:     "user_id_daisy",
-				Value:    user.UserID,
-				HttpOnly: true,
-				Expires:  time.Now().AddDate(10, 0, 0),
-				Domain:   domain,
-			}
-			http.SetCookie(w, &cookie)
+			http.SetCookie(w, s.newIDCookie(r, user.UserID))
 		default:
 			logger.LogError(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
@@ -112,21 +135,7 @@ func (s *Server) PostSyncCode(w http.ResponseWriter, r *http.Request) {
 
 	userID := user.UserID
 
-	domain := ""
-
-	if strings.Contains(r.Host, "pethenry.com") {
-		domain = ".pethenry.com"
-	}
-
-	cookie := &http.Cookie{
-		Name:     "user_id_daisy",
-		Value:    userID,
-		HttpOnly: true,
-		Expires:  time.Now().AddDate(10, 0, 0),
-		Domain:   domain,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, s.newIDCookie(r, userID))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})
@@ -154,4 +163,23 @@ func ServeError(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/error.html"))
 
 	_ = tmpl.Execute(w, nil)
+}
+
+func (s *Server) newIDCookie(r *http.Request, userID string) *http.Cookie {
+
+	domain := ""
+
+	if strings.Contains(r.Host, "pethenry.com") {
+		domain = ".pethenry.com"
+	}
+
+	cookie := &http.Cookie{
+		Name:     "user_id_daisy",
+		Value:    userID,
+		HttpOnly: true,
+		Expires:  time.Now().AddDate(10, 0, 0),
+		Domain:   domain,
+	}
+
+	return cookie
 }

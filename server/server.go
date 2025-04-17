@@ -55,7 +55,7 @@ func (s *Server) InitRoutes() {
 	s.Mux.HandleFunc("/roadmap", ServeRoadmap)
 	s.Mux.HandleFunc("/error", ServeError)
 
-	s.Mux.HandleFunc("/ws", s.HandleConnections)
+	s.Mux.HandleFunc("/ws", s.ServeWebsocket)
 }
 
 func (s *Server) StartHTTPS() error {
