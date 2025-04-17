@@ -2,6 +2,7 @@ package db
 
 import (
 	"net/http"
+	"sync"
 )
 
 const charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -11,6 +12,7 @@ type User struct {
 	DisplayName string `field:"display_name"`
 	SyncCode    string `field:"sync_code"`
 	PetCount    int    `field:"pets"`
+	mu          sync.Mutex
 }
 
 func (u *User) ID() string {
@@ -29,4 +31,10 @@ func GetUserID(r *http.Request) (string, error) {
 	}
 
 	return userID.Value, nil
+}
+
+func (u *User) SafeIncrementPet() {
+	u.mu.Lock()
+	u.PetCount++
+	u.mu.Unlock()
 }

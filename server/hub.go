@@ -28,7 +28,7 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
 
-		s.Game.PetDaisy()
+		s.Game.PetDaisy(&message.Client.user)
 		message.Client.user.PetCount++
 		s.store.SaveUserScore(&message.Client.user)
 		s.out <- ServerMessage{
@@ -44,10 +44,6 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 		if game.CheckPersonalMilestone(count) {
 			s.out <- newAchievmentNotification(message.Client.DisplayName(), count)
 		}
-
-		//if game.CheckMilestone() {
-		//	s.out <- newMilestoneNotification()
-		//}
 
 		return
 	}
