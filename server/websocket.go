@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 )
 
+// Deprecated: Controls for pet validation
 const (
 	PET_WINDOW    = 25
 	SUS_THRESHOLD = 15
@@ -18,7 +19,7 @@ var (
 	lastLeaderboardUpdate = int64(0)
 )
 
-// handlePet checks for cheating and increments the pet count
+// Deprecated: handlePet checks for cheating and increments the pet count
 func handlePet(client *Client) {
 	petTimeIdx := client.sessionPets % PET_WINDOW
 

@@ -156,6 +156,7 @@ func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
 		rows.Scan(&user.UserID, &user.DisplayName, &user.PetCount)
 
 		topUsers = append(topUsers, UserToLeaderboardRowData(*user, position))
+		position++
 	}
 
 	return topUsers

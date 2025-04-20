@@ -5,13 +5,15 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Service struct {
 	store    *db.UserStore
 	PetCount int64
 
-	mu sync.RWMutex
+	UserPetHistory map[string][10]time.Time
+	mu             sync.RWMutex
 }
 
 var Counter int64
@@ -20,6 +22,7 @@ func NewController(store *db.UserStore) *Service {
 	controller := &Service{
 		store,
 		0,
+		make(map[string][10]time.Time),
 		sync.RWMutex{},
 	}
 	controller.InitCounter()
