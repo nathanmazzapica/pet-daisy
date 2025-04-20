@@ -62,6 +62,7 @@ func (s *Server) handleClientUnregister(client *Client) {
 		close(client.send)
 		s.out <- playerLeftNotification(client.user.DisplayName)
 		s.out <- playerCountNotification(len(s.clients))
+		s.store.SaveUserScore(client.user)
 	}
 }
 

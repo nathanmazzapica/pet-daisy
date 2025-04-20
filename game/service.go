@@ -43,6 +43,11 @@ func (s *Service) InitCounter() {
 func (s *Service) PetDaisy(user *db.User) {
 	atomic.AddInt64(&s.PetCount, 1)
 	user.SafeIncrementPet()
+
+	if user.PetCount < 10_000 && user.PetCount%100 != 0 {
+		return
+	}
+
 	s.store.SaveUserScore(user)
 }
 
