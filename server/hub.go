@@ -28,7 +28,7 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 	if message.Data == "$!pet" {
 
-		s.Game.PetDaisy(&message.Client.user)
+		s.Game.PetDaisy(message.Client.user)
 
 		s.out <- ServerMessage{
 			Name: "petCounter",

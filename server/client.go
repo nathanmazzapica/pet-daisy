@@ -12,7 +12,7 @@ import (
 // Client represents a WebSocket connection
 type Client struct {
 	conn        *websocket.Conn
-	user        db.User
+	user        *db.User
 	lastPetTime time.Time
 	susPets     int
 	petTimes    [PET_WINDOW]time.Time
@@ -30,7 +30,7 @@ const (
 	maxMessageSize = 4096
 )
 
-func (s *Server) newClient(conn *websocket.Conn, user db.User) *Client {
+func (s *Server) newClient(conn *websocket.Conn, user *db.User) *Client {
 	client := &Client{
 		conn: conn,
 		user: user,

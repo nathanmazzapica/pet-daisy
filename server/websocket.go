@@ -72,7 +72,7 @@ func (s *Server) autoSave() {
 		time.Sleep(3 * time.Minute)
 		s.mu.RLock()
 		for client := range s.clients {
-			if err := s.store.SaveUserScore(&client.user); err != nil {
+			if err := s.store.SaveUserScore(client.user); err != nil {
 				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
 				logger.ErrLog.Println(errStr)
 				continue

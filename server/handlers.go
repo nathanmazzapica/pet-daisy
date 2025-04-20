@@ -47,7 +47,7 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := s.newClient(conn, *user)
+	client := s.newClient(conn, user)
 
 	client.hub.register <- client
 
