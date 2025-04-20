@@ -26,13 +26,19 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.store.GetUserByID(userID)
-	if err != nil {
-		logger.ErrLog.Println(err)
-		return
-	}
+	var user *db.User
 
-	s.Game.UserCache[userID] = user
+	if user, err = s.store.GetUserFromCache(userID); err != nil {
+		log.Printf("user: %s not found in cache...\n", userID)
+		if user, err = s.store.GetUserByID(userID); err != nil {
+			log.Printf("failed to retrieve user: %v", err)
+			return
+		}
+		log.Printf("user: %s loaded from database...\n", userID)
+		s.store.CacheUser(user)
+	} else {
+		log.Printf("user: %s found in cache...\n", userID)
+	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 

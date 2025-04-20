@@ -8,10 +8,15 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"log"
 	"math/rand"
+	"sync"
+	"time"
 )
 
 type UserStore struct {
 	DB *sql.DB
+
+	Cache map[string]*User
+	mu    sync.RWMutex
 }
 
 // UserStoreInterface exists for future purposes and is currently redundant. I plan to eventually move to MySQL and will create a different UserStore type for it that implements this interface.
@@ -27,7 +32,11 @@ type UserStoreInterface interface {
 }
 
 func NewUserStore(db *sql.DB) UserStore {
-	return UserStore{DB: db}
+	return UserStore{
+		DB:    db,
+		Cache: map[string]*User{},
+		mu:    sync.RWMutex{},
+	}
 }
 
 func (s *UserStore) CreateUser() (*User, error) {
@@ -152,6 +161,35 @@ func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
 	return topUsers
 }
 
+func (s *UserStore) CacheUser(user *User) {
+	s.mu.Lock()
+	s.Cache[user.UserID] = user
+	s.mu.Unlock()
+}
+
+func (s *UserStore) GetUserFromCache(userID string) (*User, error) {
+	if user, ok := s.Cache[userID]; ok {
+		return user, nil
+	}
+	return nil, fmt.Errorf("no user with id: %v", userID)
+}
+
+func (s *UserStore) Autosave() {
+	for {
+		time.Sleep(3 * time.Minute)
+		s.mu.RLock()
+		for _, user := range s.Cache {
+			err := s.SaveUserScore(user)
+			if err != nil {
+				log.Printf("save user score error: %v", err)
+				log.Printf("user info dump: %+v", user)
+				continue
+			}
+		}
+		s.mu.RUnlock()
+	}
+}
+
 // generateSyncCode generates a random 6 digit 'syncCode' used for account recovery/syncing
 func generateSyncCode() string {
 	code := make([]byte, 6)
@@ -169,7 +207,7 @@ func getRandomDisplayName() string {
 		"intellectual", "philosophical", "charged", "empty", "full",
 		"serious", "vengeful", "malignant", "generous", "complacent",
 		"ambitious", "lazy", "dull", "sharp", "splendid", "sexy", "cute",
-		"loving", "hateful", "spiteful", "rude", "polite", "dasterdly", "depressed"}
+		"loving", "hateful", "spiteful", "rude", "polite", "dastardly", "depressed"}
 
 	nouns := []string{"Dog", "Watermelon", "Crusader", "Lancer", "Envisage", "Frog",
 		"Beetle", "Cellphone", "Python", "Lizard", "Butterfly", "Dragon",

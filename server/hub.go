@@ -1,5 +1,7 @@
 package server
 
+// A lot of this could be moved to websocket.go
+
 import (
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/utils"
@@ -26,11 +28,8 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 	if message.Data == "$!pet" {
 
-		// I will need to refactor handlePet to allow for proper separation of concerns. For now this will optimistically add pets even if the user is detected to be cheating.
-
 		s.Game.PetDaisy(&message.Client.user)
-		message.Client.user.PetCount++
-		s.store.SaveUserScore(&message.Client.user)
+
 		s.out <- ServerMessage{
 			Name: "petCounter",
 			Data: strconv.Itoa(int(s.Game.PetCount)),
@@ -74,7 +73,6 @@ func (s *Server) handleClientUnregister(client *Client) {
 func (s *Server) broadcastMessages() {
 	for {
 		message := <-s.out
-		log.Println("Broadcasting message:", message)
 
 		for client := range s.clients {
 			select {
