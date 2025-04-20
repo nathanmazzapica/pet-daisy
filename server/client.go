@@ -5,22 +5,24 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"log"
-	"sync"
 	"time"
 )
 
 // Client represents a WebSocket connection
 type Client struct {
-	conn        *websocket.Conn
-	user        *db.User
-	lastPetTime time.Time
-	susPets     int
-	petTimes    [PET_WINDOW]time.Time
-	sessionPets int
-	mutex       sync.Mutex
+	conn *websocket.Conn
+	user *db.User
 
 	hub  *Server
 	send chan ServerMessage
+	//Deprecated: lastPetTime is used for checking if a player is cheating
+	lastPetTime time.Time
+	//Deprecated: susPets is used for checking if a player is cheating
+	susPets int
+	//Deprecated: petTimes is used for checking if a player is cheating
+	petTimes [PET_WINDOW]time.Time
+	//Deprecated: sessionPets is used for checking if a player is cheating
+	sessionPets int
 }
 
 const (
