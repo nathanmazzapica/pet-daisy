@@ -7,6 +7,7 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
 	"strconv"
+	"time"
 )
 
 func (s *Server) listen() {
@@ -83,4 +84,18 @@ func (s *Server) broadcast() {
 			}
 		}
 	}
+}
+
+func (s *Server) getDelay() int64 {
+	delay := int64(150*len(s.clients)) / 2
+
+	if delay > 1000 {
+		return 1000
+	}
+
+	return delay
+}
+
+func (s *Server) shouldUpdateLeaderboard() bool {
+	return time.Now().UnixMilli() > s.store.LastLeaderboardUpdate+s.getDelay()
 }

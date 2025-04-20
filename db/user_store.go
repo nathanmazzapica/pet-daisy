@@ -17,6 +17,8 @@ type UserStore struct {
 
 	Cache map[string]*User
 	mu    sync.RWMutex
+
+	LastLeaderboardUpdate int64
 }
 
 // UserStoreInterface exists for future purposes and is currently redundant. I plan to eventually move to MySQL and will create a different UserStore type for it that implements this interface.
@@ -158,6 +160,8 @@ func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
 		topUsers = append(topUsers, UserToLeaderboardRowData(*user, position))
 		position++
 	}
+
+	s.LastLeaderboardUpdate = time.Now().UnixMilli()
 
 	return topUsers
 }
