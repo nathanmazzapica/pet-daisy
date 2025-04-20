@@ -9,8 +9,8 @@ import (
 	"strconv"
 )
 
-func (s *Server) run() {
-	go s.broadcastMessages()
+func (s *Server) listen() {
+	go s.broadcast()
 	for {
 		select {
 		case client := <-s.register:
@@ -70,7 +70,7 @@ func (s *Server) handleClientUnregister(client *Client) {
 	}
 }
 
-func (s *Server) broadcastMessages() {
+func (s *Server) broadcast() {
 	for {
 		message := <-s.out
 

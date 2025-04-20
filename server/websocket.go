@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/nathanmazzapica/pet-daisy/logger"
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"time"
 
@@ -65,23 +64,6 @@ func kickCheater(client *Client, penalty int) {
 	game.Counter -= int64(penalty)
 
 	client.conn.Close()
-}
-
-func (s *Server) autoSave() {
-	for {
-		time.Sleep(3 * time.Minute)
-		s.mu.RLock()
-		for client := range s.clients {
-			if err := s.store.SaveUserScore(client.user); err != nil {
-				errStr := fmt.Sprintf("Failed to save user %s to db: %v\nWill retry next autosave", client.user.DisplayName, err)
-				logger.ErrLog.Println(errStr)
-				continue
-			}
-			fmt.Printf("Saved user %s to db\n", client.user.DisplayName)
-		}
-		s.mu.RUnlock()
-		fmt.Println("Autosave complete.")
-	}
 }
 
 func (s *Server) getDelay() int64 {
