@@ -34,10 +34,6 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 			Data: strconv.Itoa(int(s.Game.PetCount)),
 		}
 
-		if s.shouldUpdateLeaderboard() {
-			s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
-		}
-
 		count := message.Client.user.PetCount
 		if game.CheckPersonalMilestone(count) {
 			s.out <- newAchievmentNotification(message.Client.DisplayName(), count)
@@ -84,16 +80,10 @@ func (s *Server) broadcast() {
 	}
 }
 
-func (s *Server) getDelay() int64 {
-	delay := int64(150*len(s.clients)) / 2
-
-	if delay > 1000 {
-		return 1000
+// Need to rethink leaderboard networking to find healthy balance between network usage and crisp realtimeness
+func (s *Server) updateLeaderboard() {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 	}
-
-	return delay
-}
-
-func (s *Server) shouldUpdateLeaderboard() bool {
-	return time.Now().UnixMilli() > s.store.LastLeaderboardUpdate+s.getDelay()
 }

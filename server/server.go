@@ -42,6 +42,7 @@ func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 func (s *Server) Start() {
 	s.InitRoutes()
 	go s.listen()
+	go s.updateLeaderboard()
 	go s.store.Autosave()
 }
 

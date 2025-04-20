@@ -143,6 +143,7 @@ func (s *UserStore) UpdateDisplayName(user *User, displayName string) error {
 }
 
 func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
+
 	var topUsers []LeaderboardRowData
 
 	rows, err := s.DB.Query("SELECT user_id, display_name, pets FROM users ORDER BY pets DESC LIMIT 10")
@@ -164,6 +165,21 @@ func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
 	s.LastLeaderboardUpdate = time.Now().UnixMilli()
 
 	return topUsers
+}
+
+func (s *UserStore) shouldUpdateLeaderboard() bool {
+	return time.Now().UnixMilli() < s.LastLeaderboardUpdate+150
+}
+
+// getDelay temporarily uses length of the cache for calculating delay
+func (s *UserStore) getDelay() int64 {
+	delay := int64(100*len(s.Cache)) / 2
+
+	if delay > 1000 {
+		return 1000
+	}
+
+	return delay
 }
 
 func (s *UserStore) CacheUser(user *User) {
