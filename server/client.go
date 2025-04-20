@@ -15,14 +15,6 @@ type Client struct {
 
 	hub  *Server
 	send chan ServerMessage
-	//Deprecated: lastPetTime is used for checking if a player is cheating
-	lastPetTime time.Time
-	//Deprecated: susPets is used for checking if a player is cheating
-	susPets int
-	//Deprecated: petTimes is used for checking if a player is cheating
-	petTimes [PET_WINDOW]time.Time
-	//Deprecated: sessionPets is used for checking if a player is cheating
-	sessionPets int
 }
 
 const (
