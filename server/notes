@@ -1,2 +1,0 @@
-WebSocket's responsibilities will be split between hub.go and client.go
-

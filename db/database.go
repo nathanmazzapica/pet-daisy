@@ -7,14 +7,14 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var DB *sql.DB
-
-func Connect() {
+func Connect() *sql.DB {
 	var err error
-	DB, err = sql.Open("sqlite", "./data.db")
+	db, err := sql.Open("sqlite", "./data.db")
 	if err != nil {
 		logger.LogError(fmt.Errorf("failed to connect to database: %w", err))
 	}
 
 	fmt.Println("Connected to database!")
+
+	return db
 }

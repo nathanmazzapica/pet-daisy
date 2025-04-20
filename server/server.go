@@ -1,27 +1,66 @@
 package server
 
 import (
+	"github.com/nathanmazzapica/pet-daisy/db"
+	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"net/http"
+	"sync"
 )
 
-var hub *Hub
+type Server struct {
+	store *db.UserStore
+	Game  *game.Service
 
-func InitRoutes() {
+	Mux   *http.ServeMux
+	WsURL string
 
-	hub = newHub()
-	go hub.run()
+	in  chan ClientMessage
+	out chan ServerMessage
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	clients    map[*Client]bool
+	register   chan *Client
+	unregister chan *Client
+	mu         sync.RWMutex
+}
+
+func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
+	return &Server{
+		store:      store,
+		Game:       game,
+		Mux:        http.NewServeMux(),
+		WsURL:      url,
+		in:         make(chan ClientMessage),
+		out:        make(chan ServerMessage),
+		clients:    make(map[*Client]bool),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		mu:         sync.RWMutex{},
+	}
+}
+
+func (s *Server) Start() {
+	s.InitRoutes()
+	go s.listen()
+	go s.updateLeaderboard()
+	go s.store.Autosave()
+}
+
+func (s *Server) InitRoutes() {
+
+	s.Mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
 	//http.HandleFunc("/", ServeBreak)
-	http.HandleFunc("/", ServeHome)
-	http.HandleFunc("/sync", PostSyncCode)
+	s.Mux.HandleFunc("/", s.ServeHome)
+	s.Mux.HandleFunc("/sync", s.PostSyncCode)
+	s.Mux.HandleFunc("/roadmap", ServeRoadmap)
+	s.Mux.HandleFunc("/error", ServeError)
 
-	http.HandleFunc("/ws", HandleConnections)
-	http.HandleFunc("/roadmap", ServeRoadmap)
-	http.HandleFunc("/error", ServeError)
+	s.Mux.HandleFunc("/ws", s.ServeWebsocket)
+}
 
-	go autoSave()
+func (s *Server) StartHTTPS() error {
+	return http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/pethenry.com/fullchain.pem", "/etc/letsencrypt/live/pethenry.com/privkey.pem", s.Mux)
 }
 
 func RedirectHTTP() {

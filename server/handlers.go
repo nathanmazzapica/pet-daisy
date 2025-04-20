@@ -4,59 +4,90 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/nathanmazzapica/pet-daisy/db"
-	"github.com/nathanmazzapica/pet-daisy/game"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"html/template"
+	"log"
 	"net/http"
-	"strings"
-	"time"
 )
 
-var WsUrl string
-var activeEvent string
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
-func ServeHome(w http.ResponseWriter, r *http.Request) {
+// ServeWebsocket upgrades HTTP to WebSocket and manages clients
+func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
+	userID, err := GetIdFromCookie(r)
+	if err != nil {
+		logger.ErrLog.Println("Could not retrieve user ID:", err)
+		return
+	}
 
-	user_id, err := r.Cookie("user_id_daisy")
+	var user *db.User
+
+	if user, err = s.store.GetUserFromCache(userID); err != nil {
+		log.Printf("user: %s not found in cache...\n", userID)
+		if user, err = s.store.GetUserByID(userID); err != nil {
+			log.Printf("failed to retrieve user: %v", err)
+			return
+		}
+		log.Printf("user: %s loaded from database...\n", userID)
+		s.store.CacheUser(user)
+	} else {
+		log.Printf("user: %s found in cache...\n", userID)
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		logger.ErrLog.Println(err)
+		return
+	}
+
+	client := s.newClient(conn, user)
+
+	client.hub.register <- client
+
+	fmt.Println("Client connected.")
+
+	go client.writePump()
+	go client.readPump()
+}
+
+func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
+	log.Println("serving home page")
+	userIdCookie, err := r.Cookie("user_id_daisy")
 	var userID string
 	var user *db.User
 
 	if err != nil {
 		switch {
+		// I want to make this its own func at some point
 		case errors.Is(err, http.ErrNoCookie):
 
-			user = db.CreateNewUser()
+			user, err = s.store.CreateUser()
+
+			if err != nil {
+				log.Println("Error creating user:", err)
+				return
+			}
+
 			fmt.Println("hello,", user.DisplayName)
 			fmt.Println("newID:", user.UserID)
 
-			domain := ""
-
-			if strings.Contains(r.Host, "pethenry.com") {
-				domain = ".pethenry.com"
-			}
-
-			cookie := http.Cookie{
-				Name:     "user_id_daisy",
-				Value:    user.UserID,
-				HttpOnly: true,
-				Expires:  time.Now().AddDate(10, 0, 0),
-				Domain:   domain,
-			}
-			http.SetCookie(w, &cookie)
+			http.SetCookie(w, s.newIDCookie(r, user.UserID))
 		default:
 			logger.LogError(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
-			// todo: make funny error html page
 			return
 		}
 	} else {
-		userID = user_id.Value
-		user, err = db.GetUserFromDB(userID)
+		userID = userIdCookie.Value
+		user, err = s.store.GetUserByID(userID)
 		if err != nil {
 			logger.LogError(err)
 		}
-
 	}
 
 	fmt.Printf("USER: {%s} CONNECTED\n", user.DisplayName)
@@ -68,14 +99,12 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 		UserPets  int
 		TotalPets int64
 		WS_URL    string
-		Event     string
 	}{
 		User:      user.DisplayName,
 		SyncCode:  user.SyncCode,
 		UserPets:  user.PetCount,
-		TotalPets: game.Counter,
-		WS_URL:    WsUrl,
-		Event:     activeEvent,
+		TotalPets: s.Game.PetCount,
+		WS_URL:    s.WsURL,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
@@ -88,7 +117,7 @@ func ServeHome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func PostSyncCode(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PostSyncCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -103,34 +132,22 @@ func PostSyncCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := db.FindIDBySyncCode(data.Code)
+	user, err := s.store.GetUserBySyncCode(data.Code)
 
 	if err != nil {
 		fmt.Println("Error recovering user:", err)
 		return
 	}
 
-	domain := ""
+	userID := user.UserID
 
-	if strings.Contains(r.Host, "pethenry.com") {
-		domain = ".pethenry.com"
-	}
-
-	cookie := &http.Cookie{
-		Name:     "user_id_daisy",
-		Value:    userID,
-		HttpOnly: true,
-		Expires:  time.Now().AddDate(10, 0, 0),
-		Domain:   domain,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, s.newIDCookie(r, userID))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})
 }
 
-func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
+func ServeRoadmap(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/roadmap.html"))
 	err := tmpl.Execute(w, nil)
 
@@ -139,7 +156,7 @@ func ServeRoadmap(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ServeBreak(w http.ResponseWriter, r *http.Request) {
+func ServeBreak(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/break.html"))
 	err := tmpl.Execute(w, nil)
 

@@ -78,6 +78,9 @@
     <script src="../static/scripts/leaderboard.js"></script>
     <script src="../static/scripts/toast.js"></script>
     <script src="../static/scripts/script.js"></script>
-{{/*    <script src="../static/scripts/{{ .Event }}"></script>*/}}
+<script>
+    handlePetCountUpdate({{ .TotalPets }})
+    personalCounter.innerText = `You have pet her ${Number(personalNumber).toLocaleString()} time${personalNumber === 1 ? "" : "s"}!`;
+</script>
 </body>
 </html>
