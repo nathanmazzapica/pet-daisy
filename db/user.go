@@ -1,7 +1,6 @@
 package db
 
 import (
-	"net/http"
 	"sync"
 )
 
@@ -17,20 +16,6 @@ type User struct {
 
 func (u *User) ID() string {
 	return u.UserID
-}
-
-//////////////////
-// Hey buddy, this shouldn't be here!
-
-// GetUserID retrieves the User ID from the client request's cookie
-func GetUserID(r *http.Request) (string, error) {
-	userID, err := r.Cookie("user_id_daisy")
-
-	if err != nil {
-		return "", err
-	}
-
-	return userID.Value, nil
 }
 
 func (u *User) SafeIncrementPet() {

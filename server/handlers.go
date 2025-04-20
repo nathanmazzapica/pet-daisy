@@ -10,8 +10,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 )
 
 var upgrader = websocket.Upgrader{
@@ -20,7 +18,7 @@ var upgrader = websocket.Upgrader{
 
 // ServeWebsocket upgrades HTTP to WebSocket and manages clients
 func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
-	userID, err := db.GetUserID(r)
+	userID, err := GetIdFromCookie(r)
 	if err != nil {
 		logger.ErrLog.Println("Could not retrieve user ID:", err)
 		return
@@ -171,23 +169,4 @@ func ServeError(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/error.html"))
 
 	_ = tmpl.Execute(w, nil)
-}
-
-func (s *Server) newIDCookie(r *http.Request, userID string) *http.Cookie {
-
-	domain := ""
-
-	if strings.Contains(r.Host, "pethenry.com") {
-		domain = ".pethenry.com"
-	}
-
-	cookie := &http.Cookie{
-		Name:     "user_id_daisy",
-		Value:    userID,
-		HttpOnly: true,
-		Expires:  time.Now().AddDate(10, 0, 0),
-		Domain:   domain,
-	}
-
-	return cookie
 }
