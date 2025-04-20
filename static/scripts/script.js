@@ -105,10 +105,10 @@ function handleIncomingChat(sender, content) {
 /**
  * @param {coordinate} mousePos
  */
-
 function checkAndPerformEasterEggs(mousePos) {
     console.log(mousePos);
     if (inRadius(mousePos, noseCoordinates, 20) && nextHonk <= Date.now()) {
+        alert("honk")
         console.log("honk");
         noseHonk.currentTime = 0;
         noseHonk.play();
