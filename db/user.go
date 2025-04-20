@@ -14,10 +14,6 @@ type User struct {
 	mu          sync.Mutex
 }
 
-func (u *User) ID() string {
-	return u.UserID
-}
-
 func (u *User) SafeIncrementPet() {
 	u.mu.Lock()
 	u.PetCount++

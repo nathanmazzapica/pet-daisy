@@ -21,7 +21,7 @@ func TestUserStore_CreateUserAndRetrieve(t *testing.T) {
 		t.Fatalf("error creating user: %v", err)
 	}
 
-	id := created.ID()
+	id := created.UserID
 	syncCode := created.SyncCode
 
 	retrieved, err := store.GetUserByID(id)
@@ -61,7 +61,7 @@ func TestUserStore_UpdateDisplayName(t *testing.T) {
 		t.Fatalf("Expected created display name to be updated to %s, got %s", newName, created.DisplayName)
 	}
 
-	retrieved, err := store.GetUserByID(created.ID())
+	retrieved, err := store.GetUserByID(created.UserID)
 
 	if err != nil {
 		t.Fatalf("error getting user by id: %v", err)
