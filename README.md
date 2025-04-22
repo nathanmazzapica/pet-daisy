@@ -39,7 +39,6 @@ Prior to this project, I would only test code by manually playing around with it
 ## What I've Built
 
 - A Realtime WebSocket server
-- Redis & MySQL implementations (separate repo)
 - Fully testable DB layer
 - Clear requirements documentation
 - Dataflow diagrams & ERDs

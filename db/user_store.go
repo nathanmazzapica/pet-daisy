@@ -12,6 +12,7 @@ import (
 type UserStore struct {
 	DB *sql.DB
 
+	// note to self: Might be better to create a UserCache struct since this would be a common resource in other UserStore implementations and should have its own receivers for ease of implementation
 	Cache map[string]*User
 	mu    sync.RWMutex
 

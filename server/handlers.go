@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 )
 
 var upgrader = websocket.Upgrader{
@@ -56,6 +57,12 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
+
+	if !isValidAgent(r.UserAgent()) {
+		http.Error(w, "Agent not supported", http.StatusNotImplemented)
+		return
+	}
+
 	log.Println("serving home page")
 	userIdCookie, err := r.Cookie("user_id_daisy")
 	var userID string
@@ -169,4 +176,22 @@ func ServeError(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/error.html"))
 
 	_ = tmpl.Execute(w, nil)
+}
+
+func isValidAgent(agent string) bool {
+	blockedAgents := []string{
+		"curl", "wget", "postmanruntime", "python-requests",
+		"go-http-client", "java", "libwww-perl", "httpclient",
+		"axios", "scrapy", "httpie", "powershell",
+	}
+
+	agent = strings.ToLower(agent)
+
+	for _, blockedAgent := range blockedAgents {
+		if strings.Contains(agent, blockedAgent) {
+			return false
+		}
+	}
+
+	return true
 }
