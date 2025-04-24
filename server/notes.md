@@ -1,1 +1,0 @@
-The purpose of `server` is to receive and broadcast WS messages. Right now it also handles behavior. I think that handling of ClientMessages should be moved to `game`. Especially with things like autosave and anticheat.

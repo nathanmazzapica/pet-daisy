@@ -17,7 +17,7 @@ func GetIdFromCookie(r *http.Request) (string, error) {
 	return userID.Value, nil
 }
 
-func (s *Server) newIDCookie(r *http.Request, userID string) *http.Cookie {
+func newIDCookie(r *http.Request, userID string) *http.Cookie {
 
 	domain := ""
 

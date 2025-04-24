@@ -14,7 +14,10 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		return origin == "http://localhost:8080" || origin == "https://pethenry.com" || origin == "https://www.pethenry.com"
+	},
 }
 
 // ServeWebsocket upgrades HTTP to WebSocket and manages clients
@@ -83,7 +86,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("hello,", user.DisplayName)
 			fmt.Println("newID:", user.UserID)
 
-			http.SetCookie(w, s.newIDCookie(r, user.UserID))
+			http.SetCookie(w, newIDCookie(r, user.UserID))
 		default:
 			logger.LogError(err)
 			http.Error(w, "server error", http.StatusInternalServerError)
@@ -93,6 +96,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		userID = userIdCookie.Value
 		user, err = s.store.GetUserByID(userID)
 		if err != nil {
+			// TODO: handle userID cookie being present but without a matching db record
 			logger.LogError(err)
 		}
 	}
@@ -148,7 +152,7 @@ func (s *Server) PostSyncCode(w http.ResponseWriter, r *http.Request) {
 
 	userID := user.UserID
 
-	http.SetCookie(w, s.newIDCookie(r, userID))
+	http.SetCookie(w, newIDCookie(r, userID))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"refresh": true})

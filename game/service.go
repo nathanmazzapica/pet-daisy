@@ -58,5 +58,3 @@ func CheckPersonalMilestone(count int) bool {
 func (s *Service) CheckMilestone() bool {
 	return s.PetCount%25_000 == 0
 }
-
-// Autosave and UserCache belong in UserStore.
