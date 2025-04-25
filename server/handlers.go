@@ -30,6 +30,7 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	var user *db.User
 
+	// TODO: Move caching logic to ServeHome.
 	if user, err = s.store.GetUserFromCache(userID); err != nil {
 		log.Printf("user: %s not found in cache...\n", userID)
 		if user, err = s.store.GetUserByID(userID); err != nil {
