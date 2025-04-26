@@ -3,8 +3,7 @@ package db
 import "time"
 
 type UserCache struct {
-	Users     map[string]*User
-	TempUsers map[string]*User
+	Users map[string]UserCacheRow
 }
 
 type UserCacheRow struct {
@@ -14,24 +13,29 @@ type UserCacheRow struct {
 
 func NewUserCache() *UserCache {
 	return &UserCache{
-		Users:     make(map[string]*User),
-		TempUsers: make(map[string]*User),
+		Users: make(map[string]UserCacheRow),
 	}
 }
 
 func (c *UserCache) GetUser(userID string) *User {
-	if user, ok := c.Users[userID]; ok {
-		return user
-	} else if user, ok := c.TempUsers[userID]; ok {
-		return user
+	if row, ok := c.Users[userID]; ok {
+		return row.user
 	}
 	return nil
 }
 
 func (c *UserCache) AddUser(user *User) {
-	c.Users[user.UserID] = user
+	expiry := time.Now().Add(time.Hour)
+	if row, ok := c.Users[user.UserID]; ok {
+		row.expiry = expiry
+	}
+	c.Users[user.UserID] = UserCacheRow{user, expiry}
 }
 
-func (c *UserCache) AddTempUser(user *User) {
-	c.TempUsers[user.UserID] = user
+func (c *UserCache) Clean() {
+	for userID, row := range c.Users {
+		if row.expiry.Before(time.Now()) {
+			delete(c.Users, userID)
+		}
+	}
 }
