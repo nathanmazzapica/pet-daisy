@@ -11,15 +11,16 @@ func (s *UserStore) Autosave() {
 	for {
 		time.Sleep(3 * time.Minute)
 		s.mu.RLock()
-		for _, user := range s.Cache {
-			err := s.SaveUserScore(user)
+		for _, row := range s.Cache.Rows {
+			err := s.SaveUserScore(row.user)
 			if err != nil {
 				log.Printf("save user score error: %v", err)
-				log.Printf("user info dump: %+v", user)
+				log.Printf("user info dump: %+v", row.user)
 				continue
 			}
 		}
 		s.mu.RUnlock()
+		s.Cache.Clean()
 	}
 }
 

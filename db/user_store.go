@@ -13,7 +13,7 @@ type UserStore struct {
 	DB *sql.DB
 
 	// note to self: Might be better to create a UserCache struct since this would be a common resource in other UserStore implementations and should have its own receivers for ease of implementation
-	Cache map[string]*User
+	Cache *UserCache
 	mu    sync.RWMutex
 
 	LastLeaderboardUpdate int64
@@ -34,7 +34,7 @@ type UserStoreInterface interface {
 func NewUserStore(db *sql.DB) UserStore {
 	return UserStore{
 		DB:    db,
-		Cache: map[string]*User{},
+		Cache: NewUserCache(),
 		mu:    sync.RWMutex{},
 	}
 }
@@ -50,6 +50,19 @@ func (s *UserStore) CreateUser() (*User, error) {
 	if err := s.PersistUser(user); err != nil {
 		return user, err
 	}
+
+	return user, nil
+}
+
+func (s *UserStore) CreateTempUser() (*User, error) {
+	user := &User{
+		UserID:      uuid.New().String(),
+		DisplayName: getRandomDisplayName(),
+		SyncCode:    generateSyncCode(),
+		PetCount:    0,
+	}
+
+	s.Cache.AddUser(user)
 
 	return user, nil
 }
@@ -138,17 +151,4 @@ func (s *UserStore) UpdateDisplayName(user *User, displayName string) error {
 	user.DisplayName = displayName
 
 	return nil
-}
-
-func (s *UserStore) CacheUser(user *User) {
-	s.mu.Lock()
-	s.Cache[user.UserID] = user
-	s.mu.Unlock()
-}
-
-func (s *UserStore) GetUserFromCache(userID string) (*User, error) {
-	if user, ok := s.Cache[userID]; ok {
-		return user, nil
-	}
-	return nil, fmt.Errorf("no user with id: %v", userID)
 }

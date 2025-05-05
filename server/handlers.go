@@ -23,6 +23,8 @@ var upgrader = websocket.Upgrader{
 // ServeWebsocket upgrades HTTP to WebSocket and manages clients
 func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 	userID, err := GetIdFromCookie(r)
+	log.Println("I am silencing the unused var error for:", userID)
+
 	if err != nil {
 		logger.ErrLog.Println("Could not retrieve user ID:", err)
 		return
@@ -30,18 +32,7 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	var user *db.User
 
-	// TODO: Move caching logic to ServeHome.
-	if user, err = s.store.GetUserFromCache(userID); err != nil {
-		log.Printf("user: %s not found in cache...\n", userID)
-		if user, err = s.store.GetUserByID(userID); err != nil {
-			log.Printf("failed to retrieve user: %v", err)
-			return
-		}
-		log.Printf("user: %s loaded from database...\n", userID)
-		s.store.CacheUser(user)
-	} else {
-		log.Printf("user: %s found in cache...\n", userID)
-	}
+	// TODO: Retrieve User
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 

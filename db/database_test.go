@@ -100,6 +100,6 @@ func assertUserEquals(t *testing.T, want, got *User) {
 		want.DisplayName != got.DisplayName ||
 		want.SyncCode != got.SyncCode ||
 		want.PetCount != got.PetCount {
-		t.Errorf("Users are not equal.\nWant: %+v\nGot: %+v", want, got)
+		t.Errorf("Rows are not equal.\nWant: %+v\nGot: %+v", want, got)
 	}
 }
