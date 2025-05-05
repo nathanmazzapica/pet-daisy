@@ -25,7 +25,7 @@ type UserStoreInterface interface {
 	PersistUser(*User) error
 	SaveUserScore(*User) error
 	GetUserCount() (int, error)
-	GetUserById(id string) (*User, error)
+	GetUserByID(id string) (*User, error)
 	GetUserBySyncCode(syncCode string) (*User, error)
 	GetTotalPetCount() (int, error)
 	UpdateDisplayName(user *User, displayName string) error
@@ -47,6 +47,7 @@ func (s *UserStore) CreateUser() (*User, error) {
 		PetCount:    0,
 	}
 
+	s.Cache.AddUser(user)
 	if err := s.PersistUser(user); err != nil {
 		return user, err
 	}
@@ -99,6 +100,11 @@ func (s *UserStore) GetUserCount() (int, error) {
 
 func (s *UserStore) GetUserByID(userID string) (*User, error) {
 	user := &User{}
+
+	if user = s.Cache.GetUser(userID); user != nil {
+		return user, nil
+	}
+
 	res := s.DB.QueryRow("SELECT user_id, display_name, sync_code, pets FROM users WHERE user_id = ?", userID)
 
 	if err := res.Scan(&user.UserID, &user.DisplayName, &user.SyncCode, &user.PetCount); err != nil {
@@ -107,6 +113,8 @@ func (s *UserStore) GetUserByID(userID string) (*User, error) {
 		}
 		return nil, err
 	}
+
+	s.Cache.AddUser(user)
 
 	return user, nil
 }

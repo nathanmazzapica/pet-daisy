@@ -68,7 +68,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		// I want to make this its own func at some point
 		case errors.Is(err, http.ErrNoCookie):
 
-			user, err = s.store.CreateUser()
+			user, err = s.store.CreateTempUser()
 
 			if err != nil {
 				log.Println("Error creating user:", err)
