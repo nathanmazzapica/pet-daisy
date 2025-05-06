@@ -7,13 +7,27 @@ import (
 	"time"
 )
 
+// This feels dirty and a little over-complicated, but it works for now...
 func (s *UserStore) Autosave() {
 	for {
-		time.Sleep(3 * time.Minute)
+		time.Sleep(1 * time.Minute)
 		s.mu.RLock()
 		for _, row := range s.Cache.Rows {
+			log.Println("SAVING!!")
 			err := s.SaveUserScore(row.user)
+			time.Sleep(10 * time.Millisecond)
+			log.Println("ERROR:", err)
+
 			if err != nil {
+				log.Printf(err.Error())
+				if err.Error() == "user not found" {
+					if row.user.PetCount > 50 {
+						log.Printf("Saving user %s to database", row.user.DisplayName)
+						// TODO: handle errors
+						_ = s.PersistUser(row.user)
+					}
+				}
+
 				log.Printf("save user score error: %v", err)
 				log.Printf("user info dump: %+v", row.user)
 				continue

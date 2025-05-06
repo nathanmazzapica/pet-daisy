@@ -50,7 +50,7 @@ func (s *UserStore) shouldUpdateLeaderboard() bool {
 
 // getDelay temporarily uses length of the cache for calculating delay
 func (s *UserStore) getDelay() int64 {
-	delay := int64(100*len(s.Cache)) / 2
+	delay := int64(100*len(s.Cache.Rows)) / 2
 
 	if delay > 1000 {
 		return 1000

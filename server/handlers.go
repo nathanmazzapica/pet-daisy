@@ -33,6 +33,7 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 	var user *db.User
 
 	// TODO: Retrieve User
+	user, err = s.store.GetUserByID(userID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 
@@ -65,7 +66,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		switch {
-		// I want to make this its own func at some point
+		// I want to make this its own func at some point — can probably be used for error handling mentioned later
 		case errors.Is(err, http.ErrNoCookie):
 
 			user, err = s.store.CreateTempUser()
@@ -89,6 +90,7 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 		user, err = s.store.GetUserByID(userID)
 		if err != nil {
 			// TODO: handle userID cookie being present but without a matching db record
+			// 05-05-25 I acknowledged this
 			logger.LogError(err)
 		}
 	}

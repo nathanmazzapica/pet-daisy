@@ -81,12 +81,26 @@ func (s *UserStore) PersistUser(user *User) error {
 }
 
 func (s *UserStore) SaveUserScore(user *User) error {
-	_, err := s.DB.Exec(
+	res, err := s.DB.Exec(
 		"UPDATE users SET pets = ? WHERE user_id = ?",
 		user.PetCount, user.UserID,
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	count, err := res.RowsAffected()
+
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
 }
 
 func (s *UserStore) GetUserCount() (int, error) {
@@ -99,11 +113,12 @@ func (s *UserStore) GetUserCount() (int, error) {
 }
 
 func (s *UserStore) GetUserByID(userID string) (*User, error) {
-	user := &User{}
 
-	if user = s.Cache.GetUser(userID); user != nil {
+	if user := s.Cache.GetUser(userID); user != nil {
 		return user, nil
 	}
+
+	user := &User{}
 
 	res := s.DB.QueryRow("SELECT user_id, display_name, sync_code, pets FROM users WHERE user_id = ?", userID)
 
