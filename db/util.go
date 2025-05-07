@@ -7,34 +7,42 @@ import (
 	"time"
 )
 
-// This feels dirty and a little over-complicated, but it works for now...
 func (s *UserStore) Autosave() {
 	for {
 		time.Sleep(1 * time.Minute)
+
 		s.mu.RLock()
-		for _, row := range s.Cache.Rows {
-			log.Println("SAVING!!")
-			err := s.SaveUserScore(row.user)
-			time.Sleep(10 * time.Millisecond)
-			log.Println("ERROR:", err)
+		s.PersistNewUsers()
+		s.SaveUserScores()
+		s.Cache.Clean()
+		s.mu.RUnlock()
+	}
+}
 
+func (s *UserStore) PersistNewUsers() {
+	for userId, user := range s.newUsers {
+		if user.PetCount >= 50 {
+			err := s.PersistUser(user)
 			if err != nil {
-				log.Printf(err.Error())
-				if err.Error() == "user not found" {
-					if row.user.PetCount > 50 {
-						log.Printf("Saving user %s to database", row.user.DisplayName)
-						// TODO: handle errors
-						_ = s.PersistUser(row.user)
-					}
-				}
-
-				log.Printf("save user score error: %v", err)
-				log.Printf("user info dump: %+v", row.user)
+				log.Printf("[ USER PERSIST ERROR ]: %v", err)
 				continue
 			}
+			delete(s.newUsers, userId)
 		}
-		s.mu.RUnlock()
-		s.Cache.Clean()
+	}
+}
+
+func (s *UserStore) SaveUserScores() {
+	for _, row := range s.Cache.Rows {
+		user := row.user
+		if _, ok := s.newUsers[user.UserID]; ok {
+			continue
+		}
+
+		err := s.SaveUserScore(user)
+		if err != nil {
+			log.Printf("[ USER SAVE ERROR ]: %v\n", err)
+		}
 	}
 }
 

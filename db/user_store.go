@@ -10,11 +10,11 @@ import (
 )
 
 type UserStore struct {
-	DB *sql.DB
-
-	// note to self: Might be better to create a UserCache struct since this would be a common resource in other UserStore implementations and should have its own receivers for ease of implementation
+	DB    *sql.DB
 	Cache *UserCache
 	mu    sync.RWMutex
+
+	newUsers map[string]*User
 
 	LastLeaderboardUpdate int64
 }
@@ -33,9 +33,10 @@ type UserStoreInterface interface {
 
 func NewUserStore(db *sql.DB) UserStore {
 	return UserStore{
-		DB:    db,
-		Cache: NewUserCache(),
-		mu:    sync.RWMutex{},
+		DB:       db,
+		Cache:    NewUserCache(),
+		mu:       sync.RWMutex{},
+		newUsers: make(map[string]*User),
 	}
 }
 
@@ -55,6 +56,7 @@ func (s *UserStore) CreateUser() (*User, error) {
 	return user, nil
 }
 
+// TODO: Collapse into s.CreateUser()
 func (s *UserStore) CreateTempUser() (*User, error) {
 	user := &User{
 		UserID:      uuid.New().String(),
@@ -64,6 +66,7 @@ func (s *UserStore) CreateTempUser() (*User, error) {
 	}
 
 	s.Cache.AddUser(user)
+	s.newUsers[user.UserID] = user
 
 	return user, nil
 }
