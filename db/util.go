@@ -33,16 +33,20 @@ func (s *UserStore) PersistNewUsers() {
 }
 
 func (s *UserStore) SaveUserScores() {
+	var users []*User
 	for _, row := range s.Cache.Rows {
 		user := row.user
 		if _, ok := s.newUsers[user.UserID]; ok {
 			continue
 		}
 
-		err := s.SaveUserScore(user)
-		if err != nil {
-			log.Printf("[ USER SAVE ERROR ]: %v\n", err)
-		}
+		users = append(users, user)
+	}
+
+	err := s.BulkSaveScores(users)
+
+	if err != nil {
+		log.Printf("[ USER SCORE SAVE ERROR ]: %v", err)
 	}
 }
 

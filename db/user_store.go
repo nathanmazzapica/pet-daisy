@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nathanmazzapica/pet-daisy/logger"
+	"log"
 	"sync"
 )
 
@@ -24,6 +25,7 @@ type UserStoreInterface interface {
 	CreateUser() (*User, error)
 	PersistUser(*User) error
 	SaveUserScore(*User) error
+	BulkSaveScores([]*User) error
 	GetUserCount() (int, error)
 	GetUserByID(id string) (*User, error)
 	GetUserBySyncCode(syncCode string) (*User, error)
@@ -84,26 +86,35 @@ func (s *UserStore) PersistUser(user *User) error {
 }
 
 func (s *UserStore) SaveUserScore(user *User) error {
-	res, err := s.DB.Exec(
-		"UPDATE users SET pets = ? WHERE user_id = ?",
-		user.PetCount, user.UserID,
-	)
+	_, err := s.DB.Exec("UPDATE users SET pets=? WHERE user_id=?", user.PetCount, user.UserID)
+	return err
+}
 
+func (s *UserStore) BulkSaveScores(users []*User) error {
+	log.Println("Beginning bulk save")
+	tx, err := s.DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	count, err := res.RowsAffected()
-
+	stmt, err := tx.Prepare("UPDATE users SET pets=? WHERE user_id=?")
 	if err != nil {
+		_ = tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 
-	if count == 0 {
-		return errors.New("user not found")
+	for _, user := range users {
+		log.Println("Saving user", user.UserID)
+		if _, err := stmt.Exec(user.PetCount, user.UserID); err != nil {
+			log.Println(err)
+			_ = tx.Rollback()
+			return err
+		}
 	}
 
-	return nil
+	log.Println("Commiting bulk save")
+	return tx.Commit()
 }
 
 func (s *UserStore) GetUserCount() (int, error) {

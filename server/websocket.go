@@ -50,7 +50,7 @@ func (s *Server) handleClientRegister(client *Client) {
 
 	s.out <- playerJoinNotification(client.DisplayName())
 	s.out <- playerCountNotification(len(s.clients))
-	s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
+	//	s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
@@ -85,6 +85,6 @@ func (s *Server) broadcast() {
 func (s *Server) updateLeaderboard() {
 	for {
 		time.Sleep(100 * time.Millisecond)
-		s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
+		//s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 	}
 }
