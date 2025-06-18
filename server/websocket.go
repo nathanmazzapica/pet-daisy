@@ -74,8 +74,7 @@ func (s *Server) broadcast() {
 			select {
 			case client.send <- message:
 			default:
-				close(client.send)
-				delete(s.clients, client)
+				s.unregister <- client
 			}
 		}
 	}

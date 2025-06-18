@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,6 +19,7 @@ var upgrader = websocket.Upgrader{
 		origin := r.Header.Get("Origin")
 		return origin == "http://localhost:8080" || origin == "https://pethenry.com" || origin == "https://www.pethenry.com"
 	},
+	HandshakeTimeout: 60 * time.Second,
 }
 
 // ServeWebsocket upgrades HTTP to WebSocket and manages clients
