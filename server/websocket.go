@@ -81,9 +81,11 @@ func (s *Server) broadcast() {
 }
 
 // Need to rethink leaderboard networking to find healthy balance between network usage and crisp realtimeness
+// TODO: Send diffs instead of full LB every time
 func (s *Server) updateLeaderboard() {
 	for {
 		time.Sleep(100 * time.Millisecond)
+		// TODO: Implement state to pause leaderboard transmission during bulk save
 		//s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 	}
 }

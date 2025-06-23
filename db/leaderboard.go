@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type Leaderboard struct {
+	Top10      []LeaderboardRowData
+	LastTop10  []LeaderboardRowData
+	LastUpdate time.Time
+}
+
 type LeaderboardRowData struct {
 	DisplayName string `json:"display_name"`
 	PetCount    int    `json:"pet_count"`

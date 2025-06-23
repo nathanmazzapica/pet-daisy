@@ -24,18 +24,12 @@ var upgrader = websocket.Upgrader{
 
 // ServeWebsocket upgrades HTTP to WebSocket and manages clients
 func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
-	userID, err := GetIdFromCookie(r)
-	log.Println("I am silencing the unused var error for:", userID)
+	user, err := s.getOrCreateUser(r, w)
 
 	if err != nil {
-		logger.ErrLog.Println("Could not retrieve user ID:", err)
+		fmt.Printf("Error retrieving user: %v\n")
 		return
 	}
-
-	var user *db.User
-
-	// TODO: Retrieve User
-	user, err = s.store.GetUserByID(userID)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 
@@ -62,39 +56,12 @@ func (s *Server) ServeHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("serving home page")
-	userIdCookie, err := r.Cookie("user_id_daisy")
-	var userID string
-	var user *db.User
+
+	user, err := s.getOrCreateUser(r, w)
 
 	if err != nil {
-		switch {
-		// I want to make this its own func at some point — can probably be used for error handling mentioned later
-		case errors.Is(err, http.ErrNoCookie):
-
-			user, err = s.store.CreateTempUser()
-
-			if err != nil {
-				log.Println("Error creating user:", err)
-				return
-			}
-
-			fmt.Println("hello,", user.DisplayName)
-			fmt.Println("newID:", user.UserID)
-
-			http.SetCookie(w, newIDCookie(r, user.UserID))
-		default:
-			logger.LogError(err)
-			http.Error(w, "server error", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		userID = userIdCookie.Value
-		user, err = s.store.GetUserByID(userID)
-		if err != nil {
-			// TODO: handle userID cookie being present but without a matching db record
-			// 05-05-25 I acknowledged this
-			logger.LogError(err)
-		}
+		fmt.Printf("Error retrieving user: %v\n", err)
+		return
 	}
 
 	fmt.Printf("USER: {%s} CONNECTED\n", user.DisplayName)
@@ -176,6 +143,46 @@ func ServeError(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/error.html"))
 
 	_ = tmpl.Execute(w, nil)
+}
+
+func (s *Server) getOrCreateUser(r *http.Request, w http.ResponseWriter) (*db.User, error) {
+	cookie, err := r.Cookie("user_id_daisy")
+
+	var userID string
+	var user *db.User
+	if err != nil {
+		switch {
+		// I want to make this its own func at some point — can probably be used for error handling mentioned later
+		case errors.Is(err, http.ErrNoCookie):
+
+			user, err = s.store.CreateTempUser()
+
+			if err != nil {
+				log.Println("Error creating user:", err)
+				return nil, err
+			}
+
+			fmt.Println("hello,", user.DisplayName)
+			fmt.Println("newID:", user.UserID)
+
+			http.SetCookie(w, newIDCookie(r, user.UserID))
+		default:
+			logger.LogError(err)
+			http.Error(w, "server error", http.StatusInternalServerError)
+			return nil, err
+		}
+	} else {
+		userID = cookie.Value
+		user, err = s.store.GetUserByID(userID)
+		if err != nil {
+			// TODO: handle userID cookie being present but without a matching db record
+			// 05-05-25 I acknowledged this
+			logger.LogError(err)
+		}
+	}
+
+	return user, nil
+
 }
 
 func isValidAgent(agent string) bool {

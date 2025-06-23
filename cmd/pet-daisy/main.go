@@ -14,48 +14,59 @@ import (
 	"os"
 )
 
+// TODO: Refactor!!!
 func main() {
-
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file:", err)
+	if err := run(); err != nil {
+		utils.SendDiscordWebhook(err.Error())
+		log.Fatalf("error running server: %v", err)
 	}
+}
 
+// run runs the server and returns the exit status
+func run() error {
+	loadEnv()
 	logger.InitLog()
 	defer logger.CloseLog()
 
-	dbConn := db.Connect()
-	store := db.NewUserStore(dbConn)
+	store := initStore()
+	game := game.NewController(&store)
 
-	gameController := game.NewController(&store)
+	wsServer := server.NewServer(&store, game, getWebsocketURL())
+	wsServer.Start()
 
-	utils.SendDiscordWebhook("daisy is waking up")
+	utils.SendDiscordWebhook("daisy is waking up!")
 
-	environment := os.Getenv("ENVIRONMENT")
-	switch environment {
+	env := os.Getenv("ENVIRONMENT")
+	switch env {
 	case "dev":
-		wsServer := server.NewServer(
-			&store,
-			gameController,
-			"ws://localhost:8080/ws",
-		)
-		wsServer.Start()
-		err = http.ListenAndServe(":8080", wsServer.Mux)
-		utils.SendDiscordWebhook(err.Error())
-		log.Fatal(err)
+		return http.ListenAndServe(":8080", wsServer.Mux)
 	case "prod":
-		wsServer := server.NewServer(
-			&store,
-			gameController,
-			"wss://pethenry.com/ws",
-		)
-		wsServer.Start()
 		go server.RedirectHTTP()
-		err = server.StartHTTPS()
-		utils.SendDiscordWebhook(err.Error())
-		log.Fatal(err)
+		return server.StartHTTPS()
 	default:
-		fmt.Println("Invalid environment configuration")
-		return
+		return fmt.Errorf("invalid environment configuration")
+	}
+
+	return fmt.Errorf("not implemented")
+}
+
+func initStore() db.UserStore {
+	dbConn := db.Connect()
+	return db.NewUserStore(dbConn)
+}
+
+func loadEnv() error {
+	return godotenv.Load()
+}
+
+func getWebsocketURL() string {
+	env := os.Getenv("ENVIRONMENT")
+	switch env {
+	case "dev":
+		return "ws://localhost:8080/ws"
+	case "prod":
+		return "wss://pethenry.com/ws"
+	default:
+		return "ws://localhost:8080/ws"
 	}
 }
