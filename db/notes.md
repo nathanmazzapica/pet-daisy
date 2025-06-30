@@ -5,3 +5,7 @@ Users who aren't on the leaderboard also don't need their pets saved every pet. 
 
 update may 7:
 I keep hearing about bulk queries being better than for loops. I should look into this properly and will. soon (tm)
+
+update june 30:
+
+redis will solve the sqlite query issue; leaderboard deltas should help the data transfer issue.

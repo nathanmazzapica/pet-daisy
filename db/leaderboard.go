@@ -64,3 +64,15 @@ func (s *UserStore) getDelay() int64 {
 
 	return delay
 }
+
+// Leaderboard delta concept notes
+
+type LeaderboardDelta struct {
+	position     int
+	lastPosition int
+	petCount     int64
+	lastPetCount int64
+}
+
+// the idea is to store leaderboard fully on server, and only send the deltas to clients.
+// benefits: 1) No longer sending display names. 2) Only sending relevant rows

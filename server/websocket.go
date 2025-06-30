@@ -85,7 +85,10 @@ func (s *Server) broadcast() {
 func (s *Server) updateLeaderboard() {
 	for {
 		time.Sleep(100 * time.Millisecond)
-		// TODO: Implement state to pause leaderboard transmission during bulk save
+		// TODO: Implement state to pause leaderboard transmission during bulk save to prevent db lock error
+		// TODO: use redis or build own in-memory leaderboard. Polling from the db directly every time just causes problems and isn't good practice
+		// TODO: stop sending 1kb of data per user every 100ms like cmon BRO THIS IS TRASH MAKE IT NOT
+		// this leaderboard is like 98% of our problems
 		//s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 	}
 }
