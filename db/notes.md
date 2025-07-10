@@ -9,3 +9,5 @@ I keep hearing about bulk queries being better than for loops. I should look int
 update june 30:
 
 redis will solve the sqlite query issue; leaderboard deltas should help the data transfer issue.
+
+-- do we really need redis though? We already have our own cache that works for our use case. It just needs leaderboard integration. Redis will add a lot of overhead
