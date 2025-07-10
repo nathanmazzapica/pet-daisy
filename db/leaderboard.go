@@ -2,6 +2,8 @@ package db
 
 import (
 	"log"
+	"sort"
+	"sync"
 	"time"
 )
 
@@ -9,6 +11,7 @@ type Leaderboard struct {
 	Top10      []LeaderboardRowData
 	LastTop10  []LeaderboardRowData
 	LastUpdate time.Time
+	mu         sync.Mutex
 }
 
 type LeaderboardRowData struct {
@@ -17,7 +20,7 @@ type LeaderboardRowData struct {
 	Position    int    `json:"position"`
 }
 
-func UserToLeaderboardRowData(user User, position int) LeaderboardRowData {
+func UserToLeaderboardRowData(user *User, position int) LeaderboardRowData {
 	return LeaderboardRowData{
 		DisplayName: user.DisplayName,
 		PetCount:    user.PetCount,
@@ -41,7 +44,7 @@ func (s *UserStore) GetTopPlayers() []LeaderboardRowData {
 		user := &User{}
 		rows.Scan(&user.UserID, &user.DisplayName, &user.PetCount)
 
-		topUsers = append(topUsers, UserToLeaderboardRowData(*user, position))
+		topUsers = append(topUsers, UserToLeaderboardRowData(user, position))
 		position++
 	}
 
@@ -76,3 +79,84 @@ type LeaderboardDelta struct {
 
 // the idea is to store leaderboard fully on server, and only send the deltas to clients.
 // benefits: 1) No longer sending display names. 2) Only sending relevant rows
+
+func NewLeaderboard(initial []LeaderboardRowData) *Leaderboard {
+	lb := &Leaderboard{
+		Top10:      make([]LeaderboardRowData, len(initial)),
+		LastTop10:  make([]LeaderboardRowData, len(initial)),
+		LastUpdate: time.Now(),
+	}
+	copy(lb.Top10, initial)
+	copy(lb.LastTop10, initial)
+	return lb
+}
+
+func (lb *Leaderboard) GetAll() []LeaderboardRowData {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	data := make([]LeaderboardRowData, len(lb.Top10))
+	copy(data, lb.Top10)
+	return data
+}
+
+// UpdateUser adjusts the leaderboard when a user's pet count changes.
+// It returns the rows that changed since the last update.
+func (lb *Leaderboard) UpdateUser(user *User) []LeaderboardRowData {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	lb.LastTop10 = append([]LeaderboardRowData(nil), lb.Top10...)
+
+	// update existing entry or append
+	found := false
+	for i := range lb.Top10 {
+		if lb.Top10[i].DisplayName == user.DisplayName {
+			lb.Top10[i].PetCount = user.PetCount
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		if len(lb.Top10) < 10 || user.PetCount > lb.Top10[len(lb.Top10)-1].PetCount {
+			lb.Top10 = append(lb.Top10, LeaderboardRowData{DisplayName: user.DisplayName, PetCount: user.PetCount})
+		}
+	}
+
+	sort.Slice(lb.Top10, func(i, j int) bool { return lb.Top10[i].PetCount > lb.Top10[j].PetCount })
+
+	if len(lb.Top10) > 10 {
+		lb.Top10 = lb.Top10[:10]
+	}
+
+	for i := range lb.Top10 {
+		lb.Top10[i].Position = i + 1
+	}
+
+	// build maps for diffing
+	oldMap := make(map[string]LeaderboardRowData)
+	for _, r := range lb.LastTop10 {
+		oldMap[r.DisplayName] = r
+	}
+	newMap := make(map[string]LeaderboardRowData)
+	for _, r := range lb.Top10 {
+		newMap[r.DisplayName] = r
+	}
+
+	var changed []LeaderboardRowData
+	for name, row := range newMap {
+		if old, ok := oldMap[name]; !ok || old.PetCount != row.PetCount || old.Position != row.Position {
+			changed = append(changed, row)
+		}
+	}
+
+	for name, old := range oldMap {
+		if _, ok := newMap[name]; !ok {
+			changed = append(changed, LeaderboardRowData{DisplayName: name, PetCount: old.PetCount, Position: 0})
+		}
+	}
+
+	lb.LastUpdate = time.Now()
+	return changed
+}

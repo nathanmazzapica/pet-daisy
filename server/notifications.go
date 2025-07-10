@@ -64,3 +64,8 @@ func leaderboardUpdateNotification(data []db.LeaderboardRowData) ServerMessage {
 
 	return ServerMessage{"leaderboard", string(jsonData)}
 }
+
+func leaderboardDeltaNotification(data []db.LeaderboardRowData) ServerMessage {
+	jsonData, _ := json.Marshal(data)
+	return ServerMessage{"leaderboardDelta", string(jsonData)}
+}

@@ -27,7 +27,7 @@ func (s *Server) ServeWebsocket(w http.ResponseWriter, r *http.Request) {
 	user, err := s.getOrCreateUser(r, w)
 
 	if err != nil {
-		fmt.Printf("Error retrieving user: %v\n")
+		fmt.Printf("Error retrieving user: %v\n", err)
 		return
 	}
 
