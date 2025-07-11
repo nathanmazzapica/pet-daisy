@@ -52,6 +52,9 @@ ws.onmessage = (event) => {
         case "leaderboard":
             displayLeaderboard(JSON.parse(message.data));
             break;
+        case "leaderboardDelta":
+            updateLeaderboardDelta(JSON.parse(message.data));
+            break;
         default:
             handleIncomingChat(message.name, message.data)
     }

@@ -5,7 +5,6 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/utils"
 	"log"
 	"strconv"
-	"time"
 )
 
 func (s *Server) listen() {
@@ -29,6 +28,11 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 
 		s.Game.PetDaisy(message.Client.user)
 
+		diff := s.LB.UpdateUser(message.Client.user)
+		if len(diff) > 0 {
+			s.out <- leaderboardDeltaNotification(diff)
+		}
+
 		s.out <- ServerMessage{
 			Name: "petCounter",
 			Data: strconv.Itoa(int(s.Game.PetCount)),
@@ -48,9 +52,10 @@ func (s *Server) handleIncomingMessage(message ClientMessage) {
 func (s *Server) handleClientRegister(client *Client) {
 	s.clients[client] = true
 
+	client.send <- leaderboardUpdateNotification(s.LB.GetAll())
+
 	s.out <- playerJoinNotification(client.DisplayName())
 	s.out <- playerCountNotification(len(s.clients))
-	//	s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 
 	utils.SendPlayerConnectionWebhook(client.DisplayName())
 
@@ -77,18 +82,5 @@ func (s *Server) broadcast() {
 				s.unregister <- client
 			}
 		}
-	}
-}
-
-// Need to rethink leaderboard networking to find healthy balance between network usage and crisp realtimeness
-// TODO: Send diffs instead of full LB every time
-func (s *Server) updateLeaderboard() {
-	for {
-		time.Sleep(100 * time.Millisecond)
-		// TODO: Implement state to pause leaderboard transmission during bulk save to prevent db lock error
-		// TODO: use redis or build own in-memory leaderboard. Polling from the db directly every time just causes problems and isn't good practice
-		// TODO: stop sending 1kb of data per user every 100ms like cmon BRO THIS IS TRASH MAKE IT NOT
-		// this leaderboard is like 98% of our problems
-		//s.out <- leaderboardUpdateNotification(s.store.GetTopPlayers())
 	}
 }

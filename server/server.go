@@ -11,6 +11,7 @@ import (
 type Server struct {
 	store *db.UserStore
 	Game  *game.Service
+	LB    *db.Leaderboard
 
 	Mux   *http.ServeMux
 	WsURL string
@@ -25,9 +26,11 @@ type Server struct {
 }
 
 func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
+	lb := db.NewLeaderboard(store.GetTopPlayers())
 	return &Server{
 		store:      store,
 		Game:       game,
+		LB:         lb,
 		Mux:        http.NewServeMux(),
 		WsURL:      url,
 		in:         make(chan ClientMessage),
@@ -42,7 +45,6 @@ func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 func (s *Server) Start() {
 	s.InitRoutes()
 	go s.listen()
-	go s.updateLeaderboard()
 	go s.store.Autosave()
 }
 

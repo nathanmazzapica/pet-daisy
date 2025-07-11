@@ -57,10 +57,13 @@ func playerCountNotification(count int) ServerMessage {
 	return ServerMessage{"playerCount", strconv.Itoa(count)}
 }
 
-// TODO: Implement
 func leaderboardUpdateNotification(data []db.LeaderboardRowData) ServerMessage {
-
 	jsonData, _ := json.Marshal(data)
 
 	return ServerMessage{"leaderboard", string(jsonData)}
+}
+
+func leaderboardDeltaNotification(data []db.LeaderboardRowData) ServerMessage {
+	jsonData, _ := json.Marshal(data)
+	return ServerMessage{"leaderboardDelta", string(jsonData)}
 }
