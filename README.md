@@ -4,7 +4,8 @@ Pet Daisy started as a simple WebSocket server to act as a backend for my JavaFX
 
 This README acts as a quick journal for me to look back on and see just how far I've come. I'm writing the first version pretty late at night, so please forgive any grammatical errors. thx.
 
-##### I am currently working on the refactor/server brancht
+
+##### I am currently working on the refactor/server branch
 
 # What I've learned so far
 
@@ -27,10 +28,6 @@ This project also introduced me to two very useful technologies, and gave me a l
 #### 1. Docker & Compose
 
 While not used in *this* repo, a rewrite I was working on earlier used Docker Compose to bundle the server's binary, MySQL, and Redis into one neat container. I am definitely not proficient in using Docker yet, but the exposure feels invaluable and I'm no longer intimidated by it.
-
-#### 2. Redis
-
-My current implementation of the leaderboard is clunky. I query the SQLite database with `SELECT user_id, display_name, pets FROM users ORDER BY pets DESC LIMIT 10`. This won't scale well and I needed to find a solution. That's when I learned about Redis `ZSets`. I got to play around with these a little and I'm excited to properly implement them into this repo ASAP.
 
 ### 4. Testing
 
