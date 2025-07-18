@@ -5,22 +5,15 @@ import (
 	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/logger"
 	"log"
-	"sync"
 	"time"
 )
 
 // Client represents a WebSocket connection
 type Client struct {
-	conn        *websocket.Conn
-	id          string
-	user        db.User
-	lastPetTime time.Time
-	susPets     int
-	petTimes    [PET_WINDOW]time.Time
-	sessionPets int
-	mutex       sync.Mutex
+	conn *websocket.Conn
+	user *db.User
 
-	hub  *Hub
+	hub  *Server
 	send chan ServerMessage
 }
 
@@ -30,6 +23,17 @@ const (
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 4096
 )
+
+func (s *Server) newClient(conn *websocket.Conn, user *db.User) *Client {
+	client := &Client{
+		conn: conn,
+		user: user,
+		hub:  s,
+		send: make(chan ServerMessage, 256),
+	}
+
+	return client
+}
 
 func (c *Client) readPump() {
 	defer func() {
@@ -57,7 +61,7 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		c.hub.receive <- message
+		c.hub.in <- message
 	}
 }
 
@@ -65,6 +69,7 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
+		c.hub.unregister <- c
 		c.conn.Close()
 	}()
 

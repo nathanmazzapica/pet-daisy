@@ -3,7 +3,11 @@
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/db/database_test.go" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/db/user.go" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/db/user_store.go" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/schema.sql" dialect="SQLite" />
     <file url="PROJECT" dialect="SQLite" />
+  </component>
+  <component name="SqlResolveMappings">
+    <file url="PROJECT" scope="{&quot;node&quot;:{  &quot;@negative&quot;:&quot;1&quot;,  &quot;group&quot;:{   &quot;@kind&quot;:&quot;root&quot;,   &quot;node&quot;:{    &quot;name&quot;:{     &quot;@qname&quot;:&quot;297dd3f1-ccf1-4578-aeee-d1d551c3df20&quot;    },    &quot;group&quot;:{     &quot;@kind&quot;:&quot;database&quot;,     &quot;node&quot;:{      &quot;@negative&quot;:&quot;1&quot;     }    }   }  } }}" />
   </component>
 </project>

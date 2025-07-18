@@ -1,6 +1,9 @@
 /data.db
 *.sh
 *.env
-.env
+*.backup
+*.log
 logs/
+bin/
+.idea/
 .DS_Store

@@ -52,6 +52,9 @@ ws.onmessage = (event) => {
         case "leaderboard":
             displayLeaderboard(JSON.parse(message.data));
             break;
+        case "leaderboardDelta":
+            updateLeaderboardDelta(JSON.parse(message.data));
+            break;
         default:
             handleIncomingChat(message.name, message.data)
     }
@@ -105,10 +108,10 @@ function handleIncomingChat(sender, content) {
 /**
  * @param {coordinate} mousePos
  */
-
 function checkAndPerformEasterEggs(mousePos) {
     console.log(mousePos);
     if (inRadius(mousePos, noseCoordinates, 20) && nextHonk <= Date.now()) {
+        alert("honk")
         console.log("honk");
         noseHonk.currentTime = 0;
         noseHonk.play();

@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nathanmazzapica/pet-daisy/db"
 	"github.com/nathanmazzapica/pet-daisy/game"
 	"math/rand"
 	"strconv"
@@ -52,15 +53,17 @@ func playerLeftNotification(user string) ServerMessage {
 	return ServerMessage{"server", fmt.Sprintf("%v has disconnected :(", user)}
 }
 
-func playerCountNotification() ServerMessage {
-	playerCount := strconv.Itoa(len(hub.clients))
-	return ServerMessage{"playerCount", playerCount}
+func playerCountNotification(count int) ServerMessage {
+	return ServerMessage{"playerCount", strconv.Itoa(count)}
 }
 
-func leaderboardUpdateNotification() ServerMessage {
-	lbData := game.GetTopX(10)
+func leaderboardUpdateNotification(data []db.LeaderboardRowData) ServerMessage {
+	jsonData, _ := json.Marshal(data)
 
-	// optimistic about errors :D
-	data, _ := json.Marshal(lbData)
-	return ServerMessage{"leaderboard", string(data)}
+	return ServerMessage{"leaderboard", string(jsonData)}
+}
+
+func leaderboardDeltaNotification(data []db.LeaderboardRowData) ServerMessage {
+	jsonData, _ := json.Marshal(data)
+	return ServerMessage{"leaderboardDelta", string(jsonData)}
 }
