@@ -79,6 +79,7 @@ func (s *Server) broadcast() {
 			select {
 			case client.send <- message:
 			default:
+				log.Printf("Dropping unresponsive client: %v", client)
 				s.unregister <- client
 			}
 		}

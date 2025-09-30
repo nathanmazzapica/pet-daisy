@@ -33,11 +33,11 @@ func NewServer(store *db.UserStore, game *game.Service, url string) *Server {
 		LB:         lb,
 		Mux:        http.NewServeMux(),
 		WsURL:      url,
-		in:         make(chan ClientMessage),
-		out:        make(chan ServerMessage),
+		in:         make(chan ClientMessage, 1024),
+		out:        make(chan ServerMessage, 1024),
 		clients:    make(map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		register:   make(chan *Client, 16),
+		unregister: make(chan *Client, 16),
 		mu:         sync.RWMutex{},
 	}
 }
